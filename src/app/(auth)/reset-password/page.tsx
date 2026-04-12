@@ -1,20 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { authFetchers } from "@/src/lib/fetchers/core";
 
 export default function ResetPasswordPage() {
-  const params = useSearchParams();
-  const tokenFromUrl = params?.get("token") ?? "";
-
-  const [token, setToken] = useState(tokenFromUrl);
+  const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const tokenValue = url.searchParams.get("token") ?? "";
+    setToken(tokenValue);
+  }, []);
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault();
