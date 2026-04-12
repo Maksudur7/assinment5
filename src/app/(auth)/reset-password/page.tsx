@@ -8,7 +8,7 @@ import { authFetchers } from "@/src/lib/fetchers/core";
 
 export default function ResetPasswordPage() {
   const params = useSearchParams();
-  const tokenFromUrl = params.get("token") ?? "";
+  const tokenFromUrl = params?.get("token") ?? "";
 
   const [token, setToken] = useState(tokenFromUrl);
   const [newPassword, setNewPassword] = useState("");
