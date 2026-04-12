@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
-import { portalService } from "@/src/lib/portal";
+import { mediaFetchers } from "@/src/lib/fetchers/core";
 import type { MediaItem } from "@/src/lib/portal/types";
 
 const PAGE_SIZE = 8;
@@ -29,10 +29,12 @@ export default function LibraryPage() {
   const [platform, setPlatform] = useState("all");
   const [releaseYear, setReleaseYear] = useState("all");
   const [minRating, setMinRating] = useState("all");
+  const [maxRating, setMaxRating] = useState("all");
+  const [popularity, setPopularity] = useState("all");
   const [sort, setSort] = useState<"latest" | "highest-rated" | "most-reviewed">("latest");
 
   async function load() {
-    const result = await portalService.getMedia({
+    const result = await mediaFetchers.list({
       page,
       pageSize: PAGE_SIZE,
       search,
@@ -40,6 +42,8 @@ export default function LibraryPage() {
       platform: platform === "all" ? undefined : platform,
       releaseYear: releaseYear === "all" ? undefined : Number(releaseYear),
       minRating: minRating === "all" ? undefined : Number(minRating),
+      maxRating: maxRating === "all" ? undefined : Number(maxRating),
+      minPopularity: popularity === "all" ? undefined : Number(popularity),
       sort,
     });
     setItems(result.items);
@@ -48,7 +52,7 @@ export default function LibraryPage() {
 
   useEffect(() => {
     void load();
-  }, [page, search, genre, platform, releaseYear, minRating, sort]);
+  }, [page, search, genre, platform, releaseYear, minRating, maxRating, popularity, sort]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
@@ -60,7 +64,7 @@ export default function LibraryPage() {
           <p className="text-white/60">Search, filter and sort published media catalog.</p>
         </div>
 
-        <div className="rounded-lg bg-zinc-900 border border-white/10 p-4 grid gap-3 lg:grid-cols-[1fr_160px_160px_140px_140px_180px]">
+        <div className="rounded-lg bg-zinc-900 border border-white/10 p-4 grid gap-3 lg:grid-cols-[1fr_140px_140px_120px_120px_140px_180px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
             <Input className="pl-9 bg-zinc-800 border-white/10 text-white" placeholder="Search title, director, cast" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
@@ -101,6 +105,24 @@ export default function LibraryPage() {
               <SelectItem value="7">7+</SelectItem>
               <SelectItem value="8">8+</SelectItem>
               <SelectItem value="9">9+</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={maxRating} onValueChange={(v) => { setMaxRating(v); setPage(1); }}>
+            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Max Rating" /></SelectTrigger>
+            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+              <SelectItem value="all">No Max</SelectItem>
+              <SelectItem value="9">9</SelectItem>
+              <SelectItem value="8">8</SelectItem>
+              <SelectItem value="7">7</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={popularity} onValueChange={(v) => { setPopularity(v); setPage(1); }}>
+            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Popularity" /></SelectTrigger>
+            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+              <SelectItem value="all">Any Popularity</SelectItem>
+              <SelectItem value="50">50+ Reviews</SelectItem>
+              <SelectItem value="100">100+ Reviews</SelectItem>
+              <SelectItem value="150">150+ Reviews</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(v) => { setSort(v as typeof sort); setPage(1); }}>

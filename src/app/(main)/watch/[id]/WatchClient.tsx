@@ -11,6 +11,7 @@ import { Input } from "@/src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
 import { portalService } from "@/src/lib/portal";
+import { reviewFetchers } from "@/src/lib/fetchers/core";
 import type { MediaItem, PortalUser, Review, ReviewComment } from "@/src/lib/portal/types";
 
 export function WatchClient({ id }: { id: string }) {
@@ -25,6 +26,7 @@ export function WatchClient({ id }: { id: string }) {
   const [spoiler, setSpoiler] = useState(false);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
+  const [replyTarget, setReplyTarget] = useState<Record<string, string | null>>({});
   const [watchSaved, setWatchSaved] = useState(false);
   const [myPurchases, setMyPurchases] = useState(0);
 
@@ -110,15 +112,16 @@ export function WatchClient({ id }: { id: string }) {
   }
 
   async function likeReview(reviewId: string) {
-    await portalService.toggleReviewLike(reviewId);
+    await reviewFetchers.toggleLike(reviewId);
     await loadAll();
   }
 
-  async function addComment(reviewId: string) {
+  async function addComment(reviewId: string, parentCommentId?: string) {
     const text = commentInput[reviewId]?.trim();
     if (!text) return;
-    await portalService.addComment(reviewId, text);
+    await reviewFetchers.comment(reviewId, text, parentCommentId);
     setCommentInput((prev) => ({ ...prev, [reviewId]: "" }));
+    setReplyTarget((prev) => ({ ...prev, [reviewId]: null }));
     await loadAll();
   }
 
@@ -238,7 +241,7 @@ export function WatchClient({ id }: { id: string }) {
                     <ThumbsUp className="w-3 h-3 mr-1" /> {review.likes}
                   </Button>
                   <Input value={commentInput[review.id] ?? ""} onChange={(e) => setCommentInput((p) => ({ ...p, [review.id]: e.target.value }))} className="bg-zinc-800 border-white/10 text-white max-w-sm h-8" placeholder="Add comment" />
-                  <Button size="sm" onClick={() => addComment(review.id)} className="bg-[#E50914] hover:bg-[#B2070F]"><MessageCircle className="w-3 h-3 mr-1" />Comment</Button>
+                  <Button size="sm" onClick={() => addComment(review.id, replyTarget[review.id] ?? undefined)} className="bg-[#E50914] hover:bg-[#B2070F]"><MessageCircle className="w-3 h-3 mr-1" />{replyTarget[review.id] ? "Reply" : "Comment"}</Button>
                   {user?.role === "admin" && (
                     <>
                       {!review.isPublished ? (
@@ -258,8 +261,14 @@ export function WatchClient({ id }: { id: string }) {
                 {(comments[review.id] ?? []).length > 0 && (
                   <div className="space-y-2 pt-2 border-t border-white/10">
                     {(comments[review.id] ?? []).map((comment) => (
-                      <div key={comment.id} className="text-sm text-white/80">
+                      <div key={comment.id} className={`text-sm text-white/80 ${comment.parentCommentId ? "pl-4 border-l border-white/20" : ""}`}>
                         <span className="text-white">{comment.userName}:</span> {comment.content}
+                        <button
+                          className="ml-2 text-xs text-[#E50914] hover:underline"
+                          onClick={() => setReplyTarget((prev) => ({ ...prev, [review.id]: comment.id }))}
+                        >
+                          Reply
+                        </button>
                       </div>
                     ))}
                   </div>

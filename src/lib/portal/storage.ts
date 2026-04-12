@@ -4,6 +4,8 @@ import type { PortalUser, PurchaseRecord, Review, ReviewComment, WatchlistItem }
 type Store = {
   users: PortalUser[];
   currentUserId: string;
+  authToken: string;
+  passwordResetTokens: Record<string, string>;
   media: typeof mediaSeed;
   reviews: Review[];
   comments: ReviewComment[];
@@ -17,6 +19,8 @@ function defaultStore(): Store {
   return {
     users: demoUsers,
     currentUserId: "u1",
+    authToken: "",
+    passwordResetTokens: {},
     media: mediaSeed,
     reviews: reviewSeed,
     comments: commentSeed,
@@ -43,6 +47,11 @@ export function writeStore(store: Store) {
 
 export function getCurrentUser(store: Store): PortalUser {
   return store.users.find((u) => u.id === store.currentUserId) ?? demoUsers[0];
+}
+
+export function getAuthToken(): string {
+  if (typeof window === "undefined") return "";
+  return readStore().authToken;
 }
 
 export type PortalStore = Store;

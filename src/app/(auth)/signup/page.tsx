@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { portalService } from "@/src/lib/portal";
+import { authFetchers } from "@/src/lib/fetchers/core";
 
 export default function Page() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function Page() {
 
     setLoading(true);
     try {
-      await portalService.register(name.trim(), email.trim(), password);
+      await authFetchers.register(name.trim(), email.trim(), password);
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");

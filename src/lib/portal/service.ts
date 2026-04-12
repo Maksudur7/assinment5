@@ -7,6 +7,7 @@ import type {
   PortalUser,
   PurchaseRecord,
   PurchaseType,
+  PaymentInput,
   Review,
   ReviewComment,
   SocialProvider,
@@ -26,6 +27,8 @@ export interface PortalService {
   login(email: string, password: string): Promise<PortalUser>;
   register(name: string, email: string, password: string): Promise<PortalUser>;
   socialLogin(provider: SocialProvider): Promise<PortalUser>;
+  requestPasswordReset(email: string): Promise<{ ok: boolean; resetToken: string }>;
+  resetPassword(resetToken: string, newPassword: string): Promise<{ ok: boolean }>;
   logout(): Promise<void>;
 
   getMedia(query?: MediaQuery): Promise<Paginated<MediaItem>>;
@@ -40,7 +43,7 @@ export interface PortalService {
   deleteOwnUnpublishedReview(reviewId: string): Promise<void>;
 
   toggleReviewLike(reviewId: string): Promise<Review>;
-  addComment(reviewId: string, content: string): Promise<ReviewComment>;
+  addComment(reviewId: string, content: string, parentCommentId?: string): Promise<ReviewComment>;
   getComments(reviewId: string): Promise<ReviewComment[]>;
   getPendingComments(): Promise<ReviewComment[]>;
   approveComment(commentId: string): Promise<ReviewComment>;
@@ -50,7 +53,7 @@ export interface PortalService {
   toggleWatchlist(mediaId: string): Promise<{ saved: boolean }>;
   getWatchlist(): Promise<MediaItem[]>;
 
-  createPurchase(type: PurchaseType, mediaId?: string): Promise<PurchaseRecord>;
+  createPurchase(type: PurchaseType, mediaId?: string, payment?: PaymentInput): Promise<PurchaseRecord>;
   getPurchaseHistory(): Promise<PurchaseRecord[]>;
   getAllPurchases(): Promise<PurchaseRecord[]>;
   revokePurchase(purchaseId: string): Promise<PurchaseRecord>;

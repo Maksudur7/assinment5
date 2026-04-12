@@ -5,6 +5,7 @@ import type {
   MediaItem,
   MediaInput,
   MediaQuery,
+  PaymentInput,
   Paginated,
   PurchaseRecord,
   PurchaseType,
@@ -19,6 +20,8 @@ function applyMediaFilter(items: MediaItem[], query: MediaQuery = {}): MediaItem
     platform,
     releaseYear,
     minRating,
+    maxRating,
+    minPopularity,
     sort = "latest",
   } = query;
 
@@ -29,12 +32,15 @@ function applyMediaFilter(items: MediaItem[], query: MediaQuery = {}): MediaItem
       q.length === 0 ||
       m.title.toLowerCase().includes(q) ||
       m.director.toLowerCase().includes(q) ||
-      m.cast.join(" ").toLowerCase().includes(q);
+      m.cast.join(" ").toLowerCase().includes(q) ||
+      m.platforms.join(" ").toLowerCase().includes(q);
     const matchesGenre = !genre || m.genres.includes(genre);
     const matchesPlatform = !platform || m.platforms.includes(platform);
     const matchesYear = !releaseYear || m.releaseYear === releaseYear;
     const matchesRating = !minRating || m.avgRating >= minRating;
-    return matchesSearch && matchesGenre && matchesPlatform && matchesYear && matchesRating;
+    const matchesMaxRating = !maxRating || m.avgRating <= maxRating;
+    const matchesPopularity = !minPopularity || m.totalReviews >= minPopularity;
+    return matchesSearch && matchesGenre && matchesPlatform && matchesYear && matchesRating && matchesMaxRating && matchesPopularity;
   });
 
   if (sort === "highest-rated") {
@@ -70,6 +76,7 @@ class MockPortalService implements PortalService {
     const found = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase() && (u.password ?? "") === password);
     if (!found) throw new Error("Invalid email or password");
     store.currentUserId = found.id;
+    store.authToken = `mock-jwt-${btoa(`${found.id}:${Date.now()}`)}`;
     writeStore(store);
     return found;
   }
@@ -89,6 +96,7 @@ class MockPortalService implements PortalService {
 
     store.users.push(user);
     store.currentUserId = user.id;
+    store.authToken = `mock-jwt-${btoa(`${user.id}:${Date.now()}`)}`;
     writeStore(store);
     return user;
   }
@@ -107,13 +115,41 @@ class MockPortalService implements PortalService {
       store.users.push(user);
     }
     store.currentUserId = user.id;
+    store.authToken = `mock-jwt-${btoa(`${user.id}:${Date.now()}`)}`;
     writeStore(store);
     return user;
+  }
+
+  async requestPasswordReset(email: string) {
+    const store = readStore();
+    const user = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) {
+      return { ok: true, resetToken: "" };
+    }
+    const resetToken = `rst_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    store.passwordResetTokens[resetToken] = user.id;
+    writeStore(store);
+    return { ok: true, resetToken };
+  }
+
+  async resetPassword(resetToken: string, newPassword: string) {
+    const store = readStore();
+    const userId = store.passwordResetTokens[resetToken];
+    if (!userId) throw new Error("Invalid or expired reset token");
+
+    const user = store.users.find((u) => u.id === userId);
+    if (!user) throw new Error("User not found");
+
+    user.password = newPassword;
+    delete store.passwordResetTokens[resetToken];
+    writeStore(store);
+    return { ok: true };
   }
 
   async logout() {
     const store = readStore();
     store.currentUserId = "u1";
+    store.authToken = "";
     writeStore(store);
   }
 
@@ -232,7 +268,7 @@ class MockPortalService implements PortalService {
     return review;
   }
 
-  async addComment(reviewId: string, content: string) {
+  async addComment(reviewId: string, content: string, parentCommentId?: string) {
     const store = readStore();
     const user = getCurrentUser(store);
     const comment = {
@@ -241,6 +277,7 @@ class MockPortalService implements PortalService {
       userId: user.id,
       userName: user.name,
       content,
+      parentCommentId,
       isPublished: true,
       createdAt: new Date().toISOString(),
     };
@@ -307,23 +344,26 @@ class MockPortalService implements PortalService {
     return store.media.filter((m) => ids.includes(m.id));
   }
 
-  async createPurchase(type: PurchaseType, mediaId?: string) {
+  async createPurchase(type: PurchaseType, mediaId?: string, payment?: PaymentInput) {
     const store = readStore();
     const user = getCurrentUser(store);
     const now = Date.now();
     const isSub = type === "subscription";
+    const selectedPlan = payment?.plan ?? "monthly";
     const record: PurchaseRecord = {
       id: `p_${now}`,
       userId: user.id,
       mediaId,
       type,
-      plan: isSub ? "monthly" : undefined,
-      amount: type === "buy" ? 19.99 : type === "rent" ? 4.99 : 9.99,
+      plan: isSub ? selectedPlan : undefined,
+      provider: payment?.provider,
+      method: payment?.method,
+      amount: type === "buy" ? 19.99 : type === "rent" ? 4.99 : selectedPlan === "yearly" ? 89.99 : 9.99,
       expiresAt:
         type === "rent"
           ? new Date(now + 1000 * 60 * 60 * 24 * 2).toISOString()
           : type === "subscription"
-            ? new Date(now + 1000 * 60 * 60 * 24 * 30).toISOString()
+            ? new Date(now + (selectedPlan === "yearly" ? 1000 * 60 * 60 * 24 * 365 : 1000 * 60 * 60 * 24 * 30)).toISOString()
             : undefined,
       createdAt: new Date(now).toISOString(),
       status: "active",

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { portalService } from "@/src/lib/portal";
+import { authFetchers } from "@/src/lib/fetchers/core";
 
 export default function Page() {
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function Page() {
     setError("");
     setLoading(true);
     try {
-      await portalService.login(email, password);
+      await authFetchers.login(email, password);
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -32,7 +32,7 @@ export default function Page() {
     setError("");
     setLoading(true);
     try {
-      await portalService.socialLogin(provider);
+      await authFetchers.socialLogin(provider);
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Social login failed");
@@ -70,6 +70,10 @@ export default function Page() {
         </div>
 
         <p className="text-white/50 text-xs mt-4">Demo user: user@ngv.local / user123 • Demo admin: admin@ngv.local / admin123</p>
+
+        <p className="text-right mt-2">
+          <Link href="/forgot-password" className="text-[#E50914] text-sm hover:underline">Forgot password?</Link>
+        </p>
 
         <p className="text-center text-white/60 text-sm mt-6">
           Don&apos;t have an account? <Link href="/signup" className="text-[#E50914] hover:underline">Sign up</Link>

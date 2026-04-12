@@ -30,6 +30,39 @@ Request:
 { "role": "user" }
 ```
 
+### POST `/auth/login`
+Request:
+```json
+{ "email": "user@example.com", "password": "secret" }
+```
+
+### POST `/auth/register`
+Request:
+```json
+{ "name": "John", "email": "john@example.com", "password": "secret" }
+```
+
+### POST `/auth/social-login`
+Request:
+```json
+{ "provider": "google" }
+```
+
+### POST `/auth/password-reset/request`
+Request:
+```json
+{ "email": "user@example.com" }
+```
+
+### POST `/auth/password-reset/confirm`
+Request:
+```json
+{ "resetToken": "rst_xxx", "newPassword": "newSecret" }
+```
+
+### POST `/auth/logout`
+Invalidates user session/token.
+
 ---
 
 ## Media
@@ -41,6 +74,8 @@ Query params:
 - `platform` (string)
 - `releaseYear` (number)
 - `minRating` (number)
+- `maxRating` (number)
+- `minPopularity` (number, total review count threshold)
 - `sort`: `latest|highest-rated|most-reviewed`
 - `page` (number)
 - `pageSize` (number)
@@ -58,6 +93,15 @@ Response:
 
 ### GET `/media/:id`
 Returns one media item or `null`.
+
+### POST `/admin/media` (admin only)
+Create media item.
+
+### PATCH `/admin/media/:id` (admin only)
+Update media item.
+
+### DELETE `/admin/media/:id` (admin only)
+Delete media item.
 
 ---
 
@@ -93,7 +137,7 @@ List comments.
 ### POST `/reviews/:reviewId/comments`
 Request:
 ```json
-{ "content": "Nice review" }
+{ "content": "Nice review", "parentCommentId": "c1" }
 ```
 
 ---
@@ -117,12 +161,29 @@ Response:
 ### POST `/payments/purchase`
 Request:
 ```json
-{ "type": "rent", "mediaId": "1" }
+{
+  "type": "subscription",
+  "mediaId": "1",
+  "payment": {
+    "provider": "stripe",
+    "plan": "monthly",
+    "method": "card",
+    "cardLast4": "4242",
+    "walletNumber": null,
+    "sendConfirmationEmail": true
+  }
+}
 ```
 `type`: `rent|buy|subscription`
 
 ### GET `/payments/history`
 Returns purchase records.
+
+### GET `/admin/payments` (admin only)
+Returns all purchase/rental records for analytics.
+
+### POST `/admin/payments/:purchaseId/revoke` (admin only)
+Revoke access or mark as refunded.
 
 ---
 
@@ -139,6 +200,21 @@ Unpublish review.
 
 ### DELETE `/admin/reviews/:reviewId`
 Delete review and related comments.
+
+### GET `/admin/comments/pending`
+List hidden/unpublished comments.
+
+### POST `/admin/comments/:commentId/approve`
+Approve comment.
+
+### POST `/admin/comments/:commentId/unpublish`
+Hide/unpublish comment.
+
+### DELETE `/admin/comments/:commentId`
+Remove comment permanently.
+
+### GET `/admin/overview`
+Returns admin dashboard summary (users, media, pending, revenue, most-reviewed).
 
 ---
 

@@ -48,6 +48,7 @@ export type ReviewComment = {
   userId: string;
   userName: string;
   content: string;
+  parentCommentId?: string;
   isPublished: boolean;
   createdAt: string;
 };
@@ -60,12 +61,25 @@ export type WatchlistItem = {
 
 export type PurchaseType = "rent" | "buy" | "subscription";
 
+export type PaymentProvider = "stripe" | "paypal" | "razorpay";
+
+export type PaymentInput = {
+  provider: PaymentProvider;
+  plan?: "monthly" | "yearly";
+  method: "card" | "wallet";
+  cardLast4?: string;
+  walletNumber?: string;
+  sendConfirmationEmail?: boolean;
+};
+
 export type PurchaseRecord = {
   id: string;
   userId: string;
   mediaId?: string;
   type: PurchaseType;
   plan?: "monthly" | "yearly";
+  provider?: PaymentProvider;
+  method?: "card" | "wallet";
   amount: number;
   expiresAt?: string;
   createdAt: string;
@@ -106,6 +120,8 @@ export type MediaQuery = {
   platform?: string;
   releaseYear?: number;
   minRating?: number;
+  maxRating?: number;
+  minPopularity?: number;
   sort?: "latest" | "highest-rated" | "most-reviewed";
   page?: number;
   pageSize?: number;
