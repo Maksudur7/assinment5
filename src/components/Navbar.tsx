@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Bell, Menu, Search, User } from "lucide-react";
 
 import { Button } from "./ui/button";
@@ -12,15 +13,27 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
+import { portalService } from "@/src/lib/portal";
+import type { PortalUser } from "@/src/lib/portal/types";
 
 export function Navbar() {
   const pathname = usePathname();
+  const [currentUser, setCurrentUser] = useState<PortalUser | null>(null);
 
   const isActive = (path: string) => pathname === path;
 
+  async function loadUser() {
+    const user = await portalService.getCurrentUser();
+    setCurrentUser(user);
+  }
+
+  useEffect(() => {
+    void loadUser();
+  }, []);
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/10">
-      <div className="max-w-[1440px] mx-auto px-6 py-4">
+      <div className="max-w-360 mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
@@ -43,12 +56,12 @@ export function Navbar() {
               Home
             </Link>
             <Link
-              href="/categories"
+              href="/library"
               className={`${
-                isActive("/categories") ? "text-white" : "text-white/60"
+                isActive("/library") ? "text-white" : "text-white/60"
               } hover:text-white transition-colors`}
             >
-              Categories
+              All Titles
             </Link>
             <Link
               href="/dashboard"
@@ -58,13 +71,23 @@ export function Navbar() {
             >
               Dashboard
             </Link>
+            {currentUser?.role === "admin" ? (
+              <Link
+                href="/admin"
+                className={`${
+                  isActive("/admin") ? "text-white" : "text-white/60"
+                } hover:text-white transition-colors`}
+              >
+                Admin
+              </Link>
+            ) : null}
             <Link
-              href="/admin"
+              href="/subscription"
               className={`${
-                isActive("/admin") ? "text-white" : "text-white/60"
+                isActive("/subscription") ? "text-white" : "text-white/60"
               } hover:text-white transition-colors`}
             >
-              Admin
+              Plans
             </Link>
           </div>
 
@@ -76,7 +99,7 @@ export function Navbar() {
               <Input
                 type="text"
                 placeholder="Search movies, series..."
-                className="bg-transparent border-0 text-white placeholder:text-white/40 focus-visible:ring-0 h-auto p-0 w-[200px]"
+                className="bg-transparent border-0 text-white placeholder:text-white/40 focus-visible:ring-0 h-auto p-0 w-50"
               />
             </div>
 
@@ -93,13 +116,32 @@ export function Navbar() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-zinc-900 border-white/10 text-white">
+                <DropdownMenuItem className="text-white/70 pointer-events-none">
+                  {currentUser?.name ?? "Guest"} • {currentUser?.role ?? "user"}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/purchases">Purchases</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/watchlist">Watchlist</Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
+                {currentUser?.role === "admin" ? (
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/admin">Admin Console</Link>
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/login">Login</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">Logout</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer" onClick={() => void portalService.logout().then(loadUser)}>
+                  Logout
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 

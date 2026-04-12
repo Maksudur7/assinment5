@@ -46,19 +46,22 @@ export function Footer() {
             <h3 className="text-white mb-4">Quick Links</h3>
             <ul className="space-y-2 text-white/60">
               <li><Link href="/" className="hover:text-white transition-colors">Home</Link></li>
-              <li><a href="/categories" className="hover:text-white transition-colors">Categories</a></li>
+              <li><a href="/library" className="hover:text-white transition-colors">All Titles</a></li>
               <li><Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
+              <li><Link href="/watchlist" className="hover:text-white transition-colors">Watchlist</Link></li>
+              <li><Link href="/profile" className="hover:text-white transition-colors">Profile</Link></li>
+              <li><Link href="/purchases" className="hover:text-white transition-colors">Purchase History</Link></li>
               <li><a href="/about" className="hover:text-white transition-colors">About NGV</a></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-white mb-4">Legal</h3>
+            <h3 className="text-white mb-4">Help & Plans</h3>
             <ul className="space-y-2 text-white/60">
-              <li><a href="/disclaimer" className="hover:text-white transition-colors">Disclaimer</a></li>
-              <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
-              <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
+              <li><Link href="/subscription" className="hover:text-white transition-colors">Subscription Plans</Link></li>
+              <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><Link href="/api-spec" className="hover:text-white transition-colors">API Contract</Link></li>
             </ul>
           </div>
         </div>
