@@ -34,6 +34,19 @@ export default function Page() {
     }
   }
 
+  async function handleSocial(provider: "google" | "facebook" | "github") {
+    setError("");
+    setLoading(true);
+    try {
+      await authFetchers.socialLogin(provider);
+      router.push("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Social signup failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md bg-zinc-900 rounded-lg p-8 border border-white/10">
@@ -59,6 +72,21 @@ export default function Page() {
           {error ? <p className="text-red-400 text-sm">{error}</p> : null}
           <button disabled={loading} className="w-full bg-[#E50914] hover:bg-[#B2070F] disabled:opacity-50 text-white py-2 rounded">{loading ? "Creating..." : "Create Account"}</button>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/20"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-zinc-900 text-white/60">Or continue with</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <button disabled={loading} onClick={() => void handleSocial("google")} className="bg-white/10 hover:bg-white/20 text-white py-2 rounded text-sm font-medium disabled:opacity-50 transition">Google</button>
+          <button disabled={loading} onClick={() => void handleSocial("github")} className="bg-white/10 hover:bg-white/20 text-white py-2 rounded text-sm font-medium disabled:opacity-50 transition">GitHub</button>
+          <button disabled={loading} onClick={() => void handleSocial("facebook")} className="bg-white/10 hover:bg-white/20 text-white py-2 rounded text-sm font-medium disabled:opacity-50 transition">Facebook</button>
+        </div>
 
         <p className="text-center text-white/60 text-sm mt-6">
           Already have an account? <Link href="/login" className="text-[#E50914] hover:underline">Login</Link>

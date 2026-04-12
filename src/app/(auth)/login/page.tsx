@@ -63,10 +63,19 @@ export default function Page() {
           <button disabled={loading} className="w-full bg-[#E50914] hover:bg-[#B2070F] disabled:opacity-50 text-white py-2 rounded">{loading ? "Please wait..." : "Login"}</button>
         </form>
 
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          <button disabled={loading} onClick={() => void handleSocial("google")} className="bg-white/10 text-white py-2 rounded text-sm disabled:opacity-50">Google</button>
-          <button disabled={loading} onClick={() => void handleSocial("facebook")} className="bg-white/10 text-white py-2 rounded text-sm disabled:opacity-50">Facebook</button>
-          <button disabled={loading} onClick={() => void handleSocial("github")} className="bg-white/10 text-white py-2 rounded text-sm disabled:opacity-50">GitHub</button>
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/20"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-zinc-900 text-white/60">Or continue with</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <button disabled={loading} onClick={() => void handleSocial("google")} className="bg-white/10 hover:bg-white/20 text-white py-2 rounded text-sm font-medium disabled:opacity-50 transition">Google</button>
+          <button disabled={loading} onClick={() => void handleSocial("github")} className="bg-white/10 hover:bg-white/20 text-white py-2 rounded text-sm font-medium disabled:opacity-50 transition">GitHub</button>
+          <button disabled={loading} onClick={() => void handleSocial("facebook")} className="bg-white/10 hover:bg-white/20 text-white py-2 rounded text-sm font-medium disabled:opacity-50 transition">Facebook</button>
         </div>
 
         <p className="text-white/50 text-xs mt-4">Demo user: user@ngv.local / user123 • Demo admin: admin@ngv.local / admin123</p>
