@@ -58,7 +58,7 @@ export default function LibraryPage() {
 
   return (
     <div className="min-h-screen bg-black pt-20">
-      <div className="max-w-[1440px] mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-360 mx-auto px-6 py-8 space-y-6">
         <div className="rounded-lg bg-zinc-900 border border-white/10 p-6">
           <h1 className="text-white text-3xl mb-2">All Movies & Series</h1>
           <p className="text-white/60">Search, filter and sort published media catalog.</p>

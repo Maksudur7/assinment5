@@ -30,7 +30,7 @@ export default function SubscriptionPage() {
 
   return (
     <div className="min-h-screen bg-black pt-20">
-      <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-300 mx-auto px-6 py-8 space-y-6">
         <div className="rounded-lg bg-zinc-900 border border-white/10 p-8">
           <h1 className="text-white text-3xl mb-2">Subscription Plans</h1>
           <p className="text-white/60">Choose a plan and unlock premium streaming, early access and ad-free experience.</p>
