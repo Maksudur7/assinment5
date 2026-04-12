@@ -153,3 +153,20 @@ export const adminFetchers = {
   unpublishComment: (commentId: string) => portalService.unpublishComment(commentId),
   removeComment: (commentId: string) => portalService.removeComment(commentId),
 };
+
+export const homeFetchers = {
+  getTrending: () => portalService.getTrendingMedia(),
+  getFeatured: () => portalService.getFeaturedMedia(),
+  getNewReleases: () => portalService.getNewReleases(),
+  getRecommendations: () => portalService.getRecommendations(),
+};
+
+export const dashboardFetchers = {
+  getStats: () => portalService.getUserStats(),
+  getFavorites: () => portalService.getUserFavorites(),
+  getWatchHistory: () => portalService.getUserWatchHistory(),
+  getResumeWatching: () => portalService.getResumeWatching(),
+  getContinueWatching: () => portalService.getContinueWatching(),
+  updateWatchProgress: (mediaId: string, progressSeconds: number) => 
+    portalService.updateWatchProgress(mediaId, progressSeconds),
+};
