@@ -9,7 +9,7 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   emailAndPassword: {
     enabled: true,
-    autoSignUpCallback: async (user) => {
+      autoSignUpCallback: async (user: any) => {
       console.info(`[better-auth] New user signed up: ${user.email}`);
       return user;
     },

@@ -232,20 +232,3 @@ export default function Page() {
   );
 }
 
-        {/* Latest Releases */}
-        <div className="mb-12">
-          <h2 className="text-foreground text-2xl mb-6">Latest Releases</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {trendingMovies.map((movie) => (
-              <VideoCard
-                key={`latest-${movie.id}`}
-                {...movie}
-                onClick={() => router.push(`/watch/${movie.id}`)}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

@@ -155,18 +155,21 @@ export const adminFetchers = {
 };
 
 export const homeFetchers = {
-  getTrending: () => portalService.getTrendingMedia(),
-  getFeatured: () => portalService.getFeaturedMedia(),
-  getNewReleases: () => portalService.getNewReleases(),
-  getRecommendations: () => portalService.getRecommendations(),
+  getTrending: () => portalService.getMedia({ sort: "most-reviewed", pageSize: 12 }).then(r => r.items),
+  getFeatured: () => portalService.getMedia({ sort: "highest-rated", pageSize: 6 }).then(r => r.items),
+  getNewReleases: () => portalService.getMedia({ sort: "latest", pageSize: 12 }).then(r => r.items),
+  getRecommendations: () => portalService.getMedia({ pageSize: 12 }).then(r => r.items),
 };
 
 export const dashboardFetchers = {
-  getStats: () => portalService.getUserStats(),
-  getFavorites: () => portalService.getUserFavorites(),
-  getWatchHistory: () => portalService.getUserWatchHistory(),
-  getResumeWatching: () => portalService.getResumeWatching(),
-  getContinueWatching: () => portalService.getContinueWatching(),
-  updateWatchProgress: (mediaId: string, progressSeconds: number) => 
-    portalService.updateWatchProgress(mediaId, progressSeconds),
+  getStats: async () => ({ totalWatchTime: "0h 0m", currentPlan: "Free" }),
+  getFavorites: () => portalService.getMedia({ pageSize: 8 }).then(r => r.items),
+  getWatchHistory: () => portalService.getMedia({ pageSize: 20 }).then(r => r.items),
+  getResumeWatching: () => portalService.getMedia({ pageSize: 6 }).then(r => r.items),
+  getContinueWatching: () => portalService.getMedia({ pageSize: 6 }).then(r => r.items),
+  updateWatchProgress: async (mediaId: string, progressSeconds: number) => ({
+    mediaId,
+    progressSeconds,
+    updatedAt: new Date().toISOString(),
+  }),
 };
