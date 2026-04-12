@@ -12,6 +12,7 @@ export function HomePage() {
   const router = useRouter();
   const [featured, setFeatured] = useState<MediaItem | null>(null);
   const [trending, setTrending] = useState<MediaItem[]>([]);
+  const [newReleases, setNewReleases] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -20,15 +21,17 @@ export function HomePage() {
       try {
         setLoading(true);
         setError("");
-        const [featuredData, trendingData] = await Promise.all([
+        const [featuredData, trendingData, newReleasesData] = await Promise.all([
           homeFetchers.getFeatured(),
           homeFetchers.getTrending(),
+          homeFetchers.getNewReleases(),
         ]);
         
         if (featuredData && featuredData.length > 0) {
           setFeatured(featuredData[0]);
         }
         setTrending(trendingData.slice(0, 4));
+        setNewReleases(newReleasesData.slice(0, 4));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load content");
       } finally {
@@ -105,6 +108,36 @@ export function HomePage() {
                     rating={media.avgRating}
                     year={String(media.releaseYear)}
                     category={media.genres[0] || "General"}
+                    onClick={() => router.push(`/watch/${media.id}`)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {newReleases.length > 0 && (
+            <section className="max-w-7xl mx-auto px-6 pb-12">
+              <div className="flex items-center justify-between gap-4 mb-6">
+                <h2 className="text-white text-2xl">Latest Releases</h2>
+                <button
+                  onClick={() => router.push("/library")}
+                  className="text-white/80 hover:text-white text-sm underline underline-offset-4"
+                >
+                  View all
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {newReleases.map((media) => (
+                  <VideoCard
+                    key={`latest-${media.id}`}
+                    id={media.id}
+                    title={media.title}
+                    thumbnail={media.poster}
+                    duration={media.duration}
+                    rating={media.avgRating}
+                    year={String(media.releaseYear)}
+                    category={media.genres[0] || "General"}
+                    isNew
                     onClick={() => router.push(`/watch/${media.id}`)}
                   />
                 ))}

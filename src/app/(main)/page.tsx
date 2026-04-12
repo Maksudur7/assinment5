@@ -225,6 +225,38 @@ export default function Page() {
                 )}
               </TabsContent>
             </Tabs>
+
+            {/* Latest Releases */}
+            {newReleases.length > 0 && (
+              <div className="mb-12">
+                <div className="flex items-center justify-between gap-4 mb-6">
+                  <h2 className="text-foreground text-2xl">Latest Releases</h2>
+                  <Button
+                    variant="outline"
+                    className="bg-card/60 border-border text-foreground hover:bg-card/80"
+                    onClick={() => router.push("/library")}
+                  >
+                    View All
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  {newReleases.map((media) => (
+                    <VideoCard
+                      key={`latest-${media.id}`}
+                      id={media.id}
+                      title={media.title}
+                      thumbnail={media.poster}
+                      duration={media.duration}
+                      rating={media.avgRating}
+                      year={String(media.releaseYear)}
+                      category={media.genres[0] || "General"}
+                      isNew
+                      onClick={() => router.push(`/watch/${media.id}`)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </>
       ) : null}
