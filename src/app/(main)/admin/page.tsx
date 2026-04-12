@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, DollarSign, Shield, Trash2, Upload, UserCheck, XCircle } from "lucide-react";
+import { BarChart3, Clapperboard, DollarSign, EyeOff, Shield, Trash2, Upload, UserCheck, XCircle } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -183,10 +183,45 @@ export default function AdminPage() {
         </div>
 
         <div className="grid md:grid-cols-4 gap-4">
-          <Card className="bg-zinc-900 border-white/10"><CardHeader className="pb-3"><CardTitle className="text-white text-base">Total Media</CardTitle></CardHeader><CardContent><p className="text-3xl text-white">{overview?.totalMedia ?? 0}</p></CardContent></Card>
-          <Card className="bg-zinc-900 border-white/10"><CardHeader className="pb-3"><CardTitle className="text-white text-base">Pending Reviews</CardTitle></CardHeader><CardContent><p className="text-3xl text-white">{overview?.pendingReviews ?? 0}</p></CardContent></Card>
-          <Card className="bg-zinc-900 border-white/10"><CardHeader className="pb-3"><CardTitle className="text-white text-base">Hidden Comments</CardTitle></CardHeader><CardContent><p className="text-3xl text-white">{overview?.hiddenComments ?? 0}</p></CardContent></Card>
-          <Card className="bg-zinc-900 border-white/10"><CardHeader className="pb-3"><CardTitle className="text-white text-base">Revenue</CardTitle></CardHeader><CardContent><p className="text-3xl text-white">${(overview?.totalRevenue ?? 0).toFixed(2)}</p></CardContent></Card>
+          <Card className="bg-zinc-900 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                <Clapperboard className="w-4 h-4 text-[#E50914]" />
+                Total Media
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-3xl text-white">{overview?.totalMedia ?? 0}</p></CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[#E50914]" />
+                Pending Reviews
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-3xl text-white">{overview?.pendingReviews ?? 0}</p></CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                <EyeOff className="w-4 h-4 text-[#E50914]" />
+                Hidden Comments
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-3xl text-white">{overview?.hiddenComments ?? 0}</p></CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-[#E50914]" />
+                Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-3xl text-white">${(overview?.totalRevenue ?? 0).toFixed(2)}</p></CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="media" className="space-y-6">
