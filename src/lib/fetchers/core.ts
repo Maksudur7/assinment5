@@ -1,14 +1,115 @@
 import { portalService } from "@/src/lib/portal";
 import type { MediaQuery, PaymentInput, PurchaseType, SocialProvider } from "@/src/lib/portal/types";
+import { authClient } from "@/src/lib/auth-client";
+import type { UserRole } from "@/src/lib/portal/types";
+
+function toPortalRole(user: Record<string, unknown>): UserRole {
+  const role = user.role;
+  if (role === "admin" || role === "user") return role;
+
+  const email = user.email;
+  if (typeof email === "string" && email.toLowerCase() === "admin@ngv.local") {
+    return "admin";
+  }
+
+  return "user";
+}
+
+function getAuthErrorMessage(error: { message?: string } | null, fallback: string): string {
+  return error?.message || fallback;
+}
 
 export const authFetchers = {
-  me: () => portalService.getCurrentUser(),
-  login: (email: string, password: string) => portalService.login(email, password),
-  register: (name: string, email: string, password: string) => portalService.register(name, email, password),
-  socialLogin: (provider: SocialProvider) => portalService.socialLogin(provider),
-  requestPasswordReset: (email: string) => portalService.requestPasswordReset(email),
-  resetPassword: (token: string, newPassword: string) => portalService.resetPassword(token, newPassword),
-  logout: () => portalService.logout(),
+  async me() {
+    const { data, error } = await authClient.getSession();
+    if (error || !data?.user) {
+      throw new Error(getAuthErrorMessage(error, "Failed to fetch current user"));
+    }
+
+    const user = data.user as Record<string, unknown>;
+
+    return {
+      id: String(user.id ?? ""),
+      name: typeof user.name === "string" ? user.name : "Unknown",
+      email: typeof user.email === "string" ? user.email : "",
+      role: toPortalRole(user),
+    };
+  },
+  async login(email: string, password: string) {
+    const { data, error } = await authClient.signIn.email({
+      email,
+      password,
+      callbackURL: "/",
+    });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error, "Login failed"));
+    }
+
+    return data;
+  },
+  async register(name: string, email: string, password: string) {
+    const { data, error } = await authClient.signUp.email({
+      name,
+      email,
+      password,
+      callbackURL: "/",
+    });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error, "Signup failed"));
+    }
+
+    return data;
+  },
+  async socialLogin(provider: SocialProvider) {
+    const { data, error } = await authClient.signIn.social({
+      provider,
+      callbackURL: "/",
+    });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error, "Social login failed"));
+    }
+
+    return data;
+  },
+  async requestPasswordReset(email: string) {
+    const redirectTo =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/reset-password`
+        : "/reset-password";
+
+    const { error } = await authClient.requestPasswordReset({
+      email,
+      redirectTo,
+    });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error, "Failed to request password reset"));
+    }
+
+    return { ok: true, resetToken: "" };
+  },
+  async resetPassword(token: string, newPassword: string) {
+    const { data, error } = await authClient.resetPassword({
+      token,
+      newPassword,
+    });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error, "Failed to reset password"));
+    }
+
+    return data;
+  },
+  async logout() {
+    const { error } = await authClient.signOut();
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error, "Logout failed"));
+    }
+  },
 };
 
 export const mediaFetchers = {

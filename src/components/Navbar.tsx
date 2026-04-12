@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Bell, Menu, Search, User } from "lucide-react";
 
 import { Button } from "./ui/button";
@@ -13,23 +12,28 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
-import { portalService } from "@/src/lib/portal";
-import type { PortalUser } from "@/src/lib/portal/types";
+import { authClient } from "@/src/lib/auth-client";
 
 export function Navbar() {
   const pathname = usePathname();
-  const [currentUser, setCurrentUser] = useState<PortalUser | null>(null);
+  const router = useRouter();
+  const { data: session } = authClient.useSession();
+
+  const currentUser = session?.user;
+  const currentUserRole = currentUser?.email?.toLowerCase() === "admin@ngv.local" ? "admin" : "user";
 
   const isActive = (path: string) => pathname === path;
 
-  async function loadUser() {
-    const user = await portalService.getCurrentUser();
-    setCurrentUser(user);
+  async function handleLogout() {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/login");
+          router.refresh();
+        },
+      },
+    });
   }
-
-  useEffect(() => {
-    void loadUser();
-  }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/10">
@@ -71,7 +75,7 @@ export function Navbar() {
             >
               Dashboard
             </Link>
-            {currentUser?.role === "admin" ? (
+            {currentUserRole === "admin" ? (
               <Link
                 href="/admin"
                 className={`${
@@ -117,7 +121,7 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-zinc-900 border-white/10 text-white">
                 <DropdownMenuItem className="text-white/70 pointer-events-none">
-                  {currentUser?.name ?? "Guest"} • {currentUser?.role ?? "user"}
+                  {currentUser?.name ?? "Guest"} • {currentUserRole}
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/profile">Profile</Link>
@@ -131,17 +135,20 @@ export function Navbar() {
                 <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
-                {currentUser?.role === "admin" ? (
+                {currentUserRole === "admin" ? (
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link href="/admin">Admin Console</Link>
                   </DropdownMenuItem>
                 ) : null}
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link href="/login">Login</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer" onClick={() => void portalService.logout().then(loadUser)}>
-                  Logout
-                </DropdownMenuItem>
+                {!currentUser ? (
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/login">Login</Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => void handleLogout()}>
+                    Logout
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
