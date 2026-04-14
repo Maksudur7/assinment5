@@ -1,7 +1,12 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter, type MemoryDB } from "better-auth/adapters/memory";
 
-const memoryDb: MemoryDB = {};
+const memoryDb: MemoryDB = {
+  user: [],
+  session: [],
+  account: [],
+  verification: [],
+};
 
 export const auth = betterAuth({
   database: memoryAdapter(memoryDb),
@@ -9,8 +14,8 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   emailAndPassword: {
     enabled: true,
-      autoSignUpCallback: async (user: any) => {
-      console.info(`[better-auth] New user signed up: ${user.email}`);
+    autoSignUpCallback: async (user: { email?: string }) => {
+      console.info(`[better-auth] New user signed up: ${user.email ?? "unknown-email"}`);
       return user;
     },
     sendResetPassword: async ({ url, user }) => {
