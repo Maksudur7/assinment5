@@ -8,9 +8,22 @@ const memoryDb: MemoryDB = {
   verification: [],
 };
 
-const resolvedServerBaseUrl =
-  process.env.BETTER_AUTH_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+function resolveServerBaseUrl(): string {
+  const configured = process.env.BETTER_AUTH_URL;
+  const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
+
+  if (configured) {
+    const isConfiguredLocalhost = /localhost|127\.0\.0\.1/.test(configured);
+    if (isConfiguredLocalhost && vercelUrl) {
+      return vercelUrl;
+    }
+    return configured;
+  }
+
+  return vercelUrl || "http://localhost:3000";
+}
+
+const resolvedServerBaseUrl = resolveServerBaseUrl();
 
 export const auth = betterAuth({
   database: memoryAdapter(memoryDb),
