@@ -29,6 +29,7 @@ export const auth = betterAuth({
   database: memoryAdapter(memoryDb),
   secret: process.env.BETTER_AUTH_SECRET || "replace-this-in-env-with-a-strong-secret-key-32chars",
   baseURL: resolvedServerBaseUrl,
+  trustHost: true,
   emailAndPassword: {
     enabled: true,
     autoSignUpCallback: async (user: { email?: string }) => {
