@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MessageCircle, ShieldAlert, ShoppingCart, ThumbsUp } from "lucide-react";
 
+import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { VideoCard } from "@/src/components/VideoCard";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -11,8 +12,9 @@ import { Input } from "@/src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
 import { portalService } from "@/src/lib/portal";
+import { canAccessMedia, getActiveSubscription } from "@/src/lib/portal/entitlements";
 import { reviewFetchers } from "@/src/lib/fetchers/core";
-import type { MediaItem, PortalUser, Review, ReviewComment } from "@/src/lib/portal/types";
+import type { MediaItem, PortalUser, PurchaseRecord, Review, ReviewComment } from "@/src/lib/portal/types";
 
 export function WatchClient({ id }: { id: string }) {
   const [user, setUser] = useState<PortalUser | null>(null);
@@ -29,8 +31,9 @@ export function WatchClient({ id }: { id: string }) {
   const [replyTarget, setReplyTarget] = useState<Record<string, string | null>>({});
   const [watchSaved, setWatchSaved] = useState(false);
   const [myPurchases, setMyPurchases] = useState(0);
+  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
 
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     const [me, item, list, purchaseHistory] = await Promise.all([
       portalService.getCurrentUser(),
       portalService.getMediaById(id),
@@ -42,6 +45,7 @@ export function WatchClient({ id }: { id: string }) {
     setMedia(item);
     setAllMedia(list.items);
     setMyPurchases(purchaseHistory.length);
+    setPurchaseHistory(purchaseHistory);
 
     if (item) {
       const r = await portalService.getReviews(item.id, me.role === "admin");
@@ -57,16 +61,25 @@ export function WatchClient({ id }: { id: string }) {
       const watchlist = await portalService.getWatchlist();
       setWatchSaved(watchlist.some((w) => w.id === item.id));
     }
-  }
+  }, [id]);
 
   useEffect(() => {
-    void loadAll();
-  }, [id]);
+    queueMicrotask(() => {
+      void loadAll();
+    });
+  }, [loadAll]);
 
   const related = useMemo(
     () => allMedia.filter((m) => m.id !== id).slice(0, 4),
     [allMedia, id],
   );
+
+  const canStreamCurrent = useMemo(() => {
+    if (!media || !user) return false;
+    return canAccessMedia(media, user.role, purchaseHistory);
+  }, [media, user, purchaseHistory]);
+
+  const activeSubscription = useMemo(() => getActiveSubscription(purchaseHistory), [purchaseHistory]);
 
   async function submitReview() {
     if (!media || !content.trim()) return;
@@ -155,7 +168,7 @@ export function WatchClient({ id }: { id: string }) {
       <div className="max-w-360 mx-auto px-6 py-6 grid lg:grid-cols-[1fr_360px] gap-6">
         <div className="space-y-6">
           <div className="rounded-lg overflow-hidden border border-white/10 bg-zinc-900">
-            <img src={media.poster} alt={media.title} className="w-full aspect-video object-cover" />
+            <ImageWithFallback src={media.poster} alt={media.title} className="w-full aspect-video object-cover" />
             <div className="p-5">
               <h1 className="text-white text-3xl mb-2">{media.title}</h1>
               <p className="text-white/70 mb-2">{media.releaseYear} • {media.genres.join(" • ")} • {media.duration}</p>
@@ -165,12 +178,29 @@ export function WatchClient({ id }: { id: string }) {
               <div className="flex flex-wrap gap-2 mb-4">
                 <Badge className="bg-[#E50914]">{media.pricing.toUpperCase()}</Badge>
                 {media.platforms.map((p) => <Badge key={p} variant="outline" className="border-white/20 text-white">{p}</Badge>)}
+                {media.pricing === "premium" ? (
+                  <Badge className={canStreamCurrent ? "bg-green-600" : "bg-yellow-600"}>
+                    {canStreamCurrent ? "UNLOCKED" : "PREMIUM LOCKED"}
+                  </Badge>
+                ) : null}
               </div>
 
+              {media.pricing === "premium" && !canStreamCurrent ? (
+                <div className="mb-4 rounded-md border border-yellow-600/40 bg-yellow-900/10 p-3 text-sm text-yellow-200">
+                  This is a premium title. Subscribe, rent, or buy to start watching instantly.
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap gap-3">
-                <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
-                  <a href={media.streamingUrl} target="_blank" rel="noreferrer">Stream Now</a>
-                </Button>
+                {canStreamCurrent ? (
+                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
+                    <a href={media.streamingUrl} target="_blank" rel="noreferrer">Stream Now</a>
+                  </Button>
+                ) : (
+                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
+                    <Link href="/subscription">Unlock Premium</Link>
+                  </Button>
+                )}
                 <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={toggleWatchlist}>
                   {watchSaved ? "Remove from Watchlist" : "Add to Watchlist"}
                 </Button>
@@ -283,6 +313,7 @@ export function WatchClient({ id }: { id: string }) {
             <h3 className="text-white mb-2">Your Account</h3>
             <p className="text-white/70 text-sm">Role: {user?.role}</p>
             <p className="text-white/70 text-sm">Purchases: {myPurchases}</p>
+            <p className="text-white/70 text-sm">Plan: {activeSubscription ? `${activeSubscription.plan ?? "monthly"} premium` : "Free"}</p>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">

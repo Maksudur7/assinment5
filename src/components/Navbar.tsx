@@ -93,6 +93,14 @@ export function Navbar() {
             >
               Plans
             </Link>
+            <Link
+              href="/card"
+              className={`${
+                isActive("/card") ? "text-white" : "text-white/60"
+              } hover:text-white transition-colors`}
+            >
+              Checkout
+            </Link>
           </div>
 
           {/* Right Side Actions */}
@@ -134,6 +142,9 @@ export function Navbar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/card">Checkout</Link>
                 </DropdownMenuItem>
                 {currentUserRole === "admin" ? (
                   <DropdownMenuItem asChild className="cursor-pointer">

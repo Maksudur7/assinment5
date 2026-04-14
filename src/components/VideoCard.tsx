@@ -1,4 +1,4 @@
-import { Clock, Play, Star } from "lucide-react";
+import { Clock, Lock, Play, Star, Unlock } from "lucide-react";
 
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Badge } from "./ui/badge";
@@ -11,6 +11,8 @@ interface VideoCardProps {
   rating?: number;
   year?: string;
   category?: string;
+  pricing?: "free" | "premium";
+  isLocked?: boolean;
   isNew?: boolean;
   onClick?: () => void;
 }
@@ -22,6 +24,8 @@ export function VideoCard({
   rating,
   year,
   category,
+  pricing,
+  isLocked,
   isNew,
   onClick,
 }: VideoCardProps) {
@@ -53,6 +57,22 @@ export function VideoCard({
             </Badge>
           )}
         </div>
+
+        {(pricing || typeof isLocked === "boolean") ? (
+          <div className="absolute top-2 right-2 flex gap-2">
+            {pricing ? (
+              <Badge className={pricing === "premium" ? "bg-amber-500 text-black border-0" : "bg-emerald-600 text-white border-0"}>
+                {pricing === "premium" ? "PREMIUM" : "FREE"}
+              </Badge>
+            ) : null}
+            {typeof isLocked === "boolean" ? (
+              <Badge variant="outline" className="bg-black/60 border-white/20 text-white backdrop-blur-sm">
+                {isLocked ? <Lock className="w-3 h-3 mr-1" /> : <Unlock className="w-3 h-3 mr-1" />}
+                {isLocked ? "Locked" : "Open"}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
 
         {duration && (
           <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm px-2 py-1 rounded text-white text-xs flex items-center gap-1">

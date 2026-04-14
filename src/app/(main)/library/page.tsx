@@ -15,7 +15,9 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { mediaFetchers } from "@/src/lib/fetchers/core";
-import type { MediaItem } from "@/src/lib/portal/types";
+import { portalService } from "@/src/lib/portal";
+import { canAccessMedia } from "@/src/lib/portal/entitlements";
+import type { MediaItem, PurchaseRecord, UserRole } from "@/src/lib/portal/types";
 
 const PAGE_SIZE = 8;
 
@@ -32,22 +34,30 @@ export default function LibraryPage() {
   const [maxRating, setMaxRating] = useState("all");
   const [popularity, setPopularity] = useState("all");
   const [sort, setSort] = useState<"latest" | "highest-rated" | "most-reviewed">("latest");
+  const [userRole, setUserRole] = useState<UserRole>("user");
+  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
 
   async function load() {
-    const result = await mediaFetchers.list({
-      page,
-      pageSize: PAGE_SIZE,
-      search,
-      genre: genre === "all" ? undefined : genre,
-      platform: platform === "all" ? undefined : platform,
-      releaseYear: releaseYear === "all" ? undefined : Number(releaseYear),
-      minRating: minRating === "all" ? undefined : Number(minRating),
-      maxRating: maxRating === "all" ? undefined : Number(maxRating),
-      minPopularity: popularity === "all" ? undefined : Number(popularity),
-      sort,
-    });
+    const [result, me, purchases] = await Promise.all([
+      mediaFetchers.list({
+        page,
+        pageSize: PAGE_SIZE,
+        search,
+        genre: genre === "all" ? undefined : genre,
+        platform: platform === "all" ? undefined : platform,
+        releaseYear: releaseYear === "all" ? undefined : Number(releaseYear),
+        minRating: minRating === "all" ? undefined : Number(minRating),
+        maxRating: maxRating === "all" ? undefined : Number(maxRating),
+        minPopularity: popularity === "all" ? undefined : Number(popularity),
+        sort,
+      }),
+      portalService.getCurrentUser(),
+      portalService.getPurchaseHistory(),
+    ]);
     setItems(result.items);
     setTotal(result.total);
+    setUserRole(me.role);
+    setPurchaseHistory(purchases);
   }
 
   useEffect(() => {
@@ -151,6 +161,8 @@ export default function LibraryPage() {
               rating={item.avgRating}
               year={String(item.releaseYear)}
               category={item.genres[0]}
+              pricing={item.pricing}
+              isLocked={item.pricing === "premium" ? !canAccessMedia(item, userRole, purchaseHistory) : false}
               onClick={() => router.push(`/watch/${item.id}`)}
             />
           ))}
