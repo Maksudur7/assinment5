@@ -8,7 +8,6 @@ import {
   SocialProvider,
   UserRole,
 } from "../portal/types";
-// import { httpPortalService as portalService } from "./http-portal-service";
 import { authClient } from "@/src/lib/auth-client";
 
 function toPortalRole(user: Record<string, unknown>): UserRole {
@@ -127,8 +126,8 @@ export const reviewFetchers = {
   deleteOwnUnpublished:
     portalService.deleteOwnUnpublishedReview.bind(portalService),
   toggleLike: portalService.toggleReviewLike.bind(portalService),
-  comment: (reviewId: string, content: string) =>
-    portalService.addComment(reviewId, content),
+  comment: (reviewId: string, content: string, parentCommentId?: string) =>
+    portalService.addComment(reviewId, content, parentCommentId),
   comments: (reviewId: string) => portalService.getComments(reviewId),
 };
 
