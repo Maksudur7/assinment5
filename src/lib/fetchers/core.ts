@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { portalService } from "../portal";
-import { setAuthToken } from "../portal/storage";
+import { setAuthToken, setStoredUser } from "../portal/storage";
 import {
   MediaQuery,
   PaymentInput,
@@ -20,92 +20,131 @@ function getAuthErrorMessage(error: any, fallback: string): string {
 
 export const authFetchers = {
   async me() {
-    const { data, error } = await authClient.getSession();
-    if (error || !data?.user) {
-      throw new Error(
-        getAuthErrorMessage(error, "Failed to fetch current user"),
-      );
+    const sessionData = await authClient.getSession();
+
+    console.log("my data ", sessionData);
+
+    if (!sessionData || !sessionData.user) {
+      throw new Error("Failed to fetch current user");
     }
 
-    const user = data.user as Record<string, unknown>;
+    const user = sessionData.user;
+
     return {
       id: String(user.id ?? ""),
       name: typeof user.name === "string" ? user.name : "Unknown",
       email: typeof user.email === "string" ? user.email : "",
-      role: toPortalRole(user),
+      role: toPortalRole(user as Record<string, any>),
     };
   },
 
   async login(email: string, password: string) {
-    const { data, error } = await authClient.signIn.email({
+    // সরাসরি রেজাল্ট নিন, { data, error } নয়
+    const res = await authClient.signIn.email({
       email,
       password,
       callbackURL: "/",
     });
 
-    if (error) throw new Error(getAuthErrorMessage(error, "Login failed"));
+    // Better Auth সফল হলে রেজাল্ট অবজেক্ট দেয়।
+    // যদি throw: true থাকে তবে এরর হলে catch-এ যাবে।
+    if (!res) throw new Error("Login failed");
 
-    const sessionToken = (data as any)?.session?.token || (data as any)?.token;
+    // সেশন টোকেন সেভ করা
+    const sessionToken = (res as any).token || (res as any).session?.token;
     if (sessionToken) setAuthToken(sessionToken);
 
-    return data;
+    // ইউজার ডাটা সেভ করা
+    if (res.user) {
+      setStoredUser({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: (res.user as any).role || "user",
+      });
+    }
+
+    return res;
   },
 
   async register(name: string, email: string, password: string) {
-    const { data, error } = await authClient.signUp.email({
+    // সরাসরি রেজাল্ট নিন
+    const res = await authClient.signUp.email({
       name,
       email,
       password,
       callbackURL: "/",
     });
 
-    if (error) throw new Error(getAuthErrorMessage(error, "Signup failed"));
+    if (!res) throw new Error("Signup failed");
 
-    const sessionToken = (data as any)?.session?.token || (data as any)?.token;
+    const sessionToken = (res as any).token || (res as any).session?.token;
     if (sessionToken) setAuthToken(sessionToken);
 
-    return data;
+    if (res.user) {
+      setStoredUser({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: (res.user as any).role || "user",
+      });
+    }
+
+    return res;
   },
 
-  async socialLogin(provider: SocialProvider) {
-    const { data, error } = await authClient.signIn.social({
+ async socialLogin(provider: SocialProvider) {
+    // সরাসরি রেজাল্ট নিন, { data, error } নয়
+    const res = await authClient.signIn.social({
       provider,
       callbackURL: "/",
     });
-    if (error)
-      throw new Error(getAuthErrorMessage(error, "Social login failed"));
-    return data;
+
+    // Better Auth যদি এরর হয় তবে সে অটোমেটিক এরর থ্রো করবে (যেহেতু throw: true আছে)
+    if (!res) throw new Error("Social login failed");
+
+    // সেশন টোকেন সেভ করা (টাইপস্ক্রিপ্টের এরর এড়াতে as any ব্যবহার করা হয়েছে)
+    const sessionToken = (res as any).token || (res as any).session?.token;
+    if (sessionToken) setAuthToken(sessionToken);
+
+    return res;
   },
 
-  async requestPasswordReset(email: string) {
+ async requestPasswordReset(email: string) {
     const redirectTo =
       typeof window !== "undefined"
         ? `${window.location.origin}/reset-password`
         : "/reset-password";
 
-    const { error } = await authClient.requestPasswordReset({
+    // আপনার এরর মেসেজ অনুযায়ী মেথডটি forgetPassword হওয়ার কথা। 
+    // যদি টাইপ এরর দেয় তবে সরাসরি এভাবে কল করুন:
+    const res = await (authClient as any).forgetPassword({
       email,
       redirectTo,
     });
-    if (error)
-      throw new Error(getAuthErrorMessage(error, "Failed to request reset"));
+
+    if (!res) throw new Error("Failed to request reset");
 
     return { ok: true, resetToken: "" };
   },
 
   async resetPassword(token: string, newPassword: string) {
-    const { data, error } = await authClient.resetPassword({
-      token,
+    // এখানেও সরাসরি রেজাল্ট নিন
+    const res = await authClient.resetPassword({
+      token, // Better Auth অনেক সময় 'token' কে 'key' হিসেবে নিতে পারে, আপনার ভার্সন অনুযায়ী চেক করবেন
       newPassword,
     });
-    if (error)
-      throw new Error(getAuthErrorMessage(error, "Failed to reset password"));
-    return data;
+
+    if (!res) throw new Error("Failed to reset password");
+    
+    return res;
   },
 
   async logout() {
-    const { error } = await authClient.signOut();
-    if (error) throw new Error(getAuthErrorMessage(error, "Logout failed"));
+    // signOut মেথডটিও সরাসরি কল করুন
+    await authClient.signOut();
+    
+    // টোকেন ক্লিয়ার করে দিন
     setAuthToken("");
   },
 };
