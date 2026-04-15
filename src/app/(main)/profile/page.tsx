@@ -12,16 +12,22 @@ export default function ProfilePage() {
   const [user, setUser] = useState<PortalUser | null>(null);
   const [watchlistCount, setWatchlistCount] = useState(0);
   const [purchaseCount, setPurchaseCount] = useState(0);
+  const [error, setError] = useState("");
 
   async function load() {
-    const [u, w, p] = await Promise.all([
-      portalService.getCurrentUser(),
-      portalService.getWatchlist(),
-      portalService.getPurchaseHistory(),
-    ]);
-    setUser(u);
-    setWatchlistCount(w.length);
-    setPurchaseCount(p.length);
+    setError("");
+    try {
+      const [u, w, p] = await Promise.all([
+        portalService.getCurrentUser(),
+        portalService.getWatchlist(),
+        portalService.getPurchaseHistory(),
+      ]);
+      setUser(u);
+      setWatchlistCount(w.length);
+      setPurchaseCount(p.length);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load profile data");
+    }
   }
 
   useEffect(() => {
@@ -34,6 +40,7 @@ export default function ProfilePage() {
         <div className="rounded-lg bg-zinc-900 border border-white/10 p-8">
           <h1 className="text-white text-3xl mb-2">User Profile</h1>
           <p className="text-white/60">Manage account state, purchases and personalization.</p>
+          {error ? <p className="text-red-400 text-sm mt-2">{error}</p> : null}
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">

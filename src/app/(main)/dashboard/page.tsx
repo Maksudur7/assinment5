@@ -15,22 +15,29 @@ export default function DashboardPage() {
   const [watchlistCount, setWatchlistCount] = useState(0);
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
+  const [error, setError] = useState("");
 
   async function load() {
-    const [me, watchlist, purchases] = await Promise.all([
-      portalService.getCurrentUser(),
-      portalService.getWatchlist(),
-      portalService.getPurchaseHistory(),
-    ]);
+    setError("");
+    try {
+      const [me, watchlist, purchases] = await Promise.all([
+        portalService.getCurrentUser(),
+        portalService.getWatchlist(),
+        portalService.getPurchaseHistory(),
+      ]);
 
-    setUser(me);
-    setWatchlistCount(watchlist.length);
-    setPurchaseCount(purchases.length);
+      setUser(me);
+      setWatchlistCount(watchlist.length);
+      setPurchaseCount(purchases.length);
 
-    if (me.role === "admin") {
-      const data = await portalService.getAdminOverview();
-      setAdminOverview(data);
-    } else {
+      if (me.role === "admin") {
+        const data = await portalService.getAdminOverview();
+        setAdminOverview(data);
+      } else {
+        setAdminOverview(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
       setAdminOverview(null);
     }
   }
@@ -41,10 +48,11 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-black pt-20">
-      <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-300 mx-auto px-6 py-8 space-y-6">
         <div className="rounded-lg border border-white/10 bg-zinc-900 p-6">
           <h1 className="text-white text-3xl mb-2">Dashboard</h1>
           <p className="text-white/60">Welcome back, {user?.name ?? "Viewer"}</p>
+          {error ? <p className="text-red-400 text-sm mt-2">{error}</p> : null}
           <div className="mt-3">
             <Badge className="bg-[#E50914] uppercase">{user?.role ?? "user"}</Badge>
           </div>

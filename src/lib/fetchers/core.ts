@@ -22,6 +22,7 @@ function getAuthErrorMessage(error: { message?: string } | null, fallback: strin
 export const authFetchers = {
   async me() {
     const { data, error } = await authClient.getSession();
+    console.log('me', data);
     if (error || !data?.user) {
       throw new Error(getAuthErrorMessage(error, "Failed to fetch current user"));
     }
@@ -42,6 +43,7 @@ export const authFetchers = {
       callbackURL: "/",
     });
 
+    console.log('login', data);
     if (error) {
       throw new Error(getAuthErrorMessage(error, "Login failed"));
     }
@@ -55,6 +57,7 @@ export const authFetchers = {
       password,
       callbackURL: "/",
     });
+    console.log('register', data);
 
     if (error) {
       throw new Error(getAuthErrorMessage(error, "Signup failed"));
