@@ -14,6 +14,8 @@ export default function ProfilePage() {
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [error, setError] = useState("");
 
+  console.log('user', user);
+
   async function load() {
     setError("");
     try {
@@ -31,6 +33,7 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, []);
 
