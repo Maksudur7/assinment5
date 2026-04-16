@@ -3,18 +3,14 @@ import type { PortalService } from "./service";
 import type {
   MediaInput,
   MediaQuery,
-  PaymentInput,
-  PurchaseRecord,
-  PurchaseType,
-  Review,
-  ReviewComment,
+  PortalUser,
   SocialProvider,
   UserRole,
 } from "./types";
 import { getAuthToken } from "./storage";
 import { authClient } from "../auth-client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://ngv-backend.vercel.app/api";
+// const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://ngv-backend.vercel.app/api";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAuthToken(); 
@@ -49,16 +45,18 @@ export const httpPortalService: PortalService = {
 
   login: async (email, password) => {
     const result = await authClient.signIn.email({ email, password });
+    const user = result.user as any;
     return {
-      ...result.user,
-      role: (result.user.role ?? "user") as UserRole,
+      ...user,
+      role: (user && "role" in user ? user.role : "user") as UserRole,
     } as PortalUser;
   },
   register: async (name, email, password) => {
     const result = await authClient.signUp.email({ email, password, name });
+    const user = result.user as any;
     return {
-      ...result.user,
-      role: (result.user.role ?? "user") as UserRole,
+      ...user,
+      role: (user && "role" in user ? user.role : "user") as UserRole,
     } as PortalUser;
   },
   logout: async () => {
