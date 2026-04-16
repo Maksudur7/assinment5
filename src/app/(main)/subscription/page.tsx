@@ -31,7 +31,10 @@ export default function SubscriptionPage() {
   }
 
   useEffect(() => {
-    void loadRealtimeData();
+    async function fetchData() {
+      await loadRealtimeData();
+    }
+    fetchData();
     const timer = window.setInterval(() => {
       void loadRealtimeData();
     }, 4000);

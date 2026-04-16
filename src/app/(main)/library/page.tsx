@@ -61,7 +61,10 @@ export default function LibraryPage() {
   }
 
   useEffect(() => {
-    void load();
+    async function fetchData() {
+      await load();
+    }
+    fetchData();
   }, [page, search, genre, platform, releaseYear, minRating, maxRating, popularity, sort]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);

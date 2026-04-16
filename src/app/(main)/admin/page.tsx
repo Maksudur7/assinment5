@@ -66,7 +66,10 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    void load();
+    async function fetchData() {
+      await load();
+    }
+    fetchData();
   }, []);
 
   async function saveMedia() {

@@ -14,7 +14,7 @@ export default function PurchasesPage() {
   const [mediaMap, setMediaMap] = useState<Record<string, MediaItem>>({});
 
   useEffect(() => {
-    void (async () => {
+    async function fetchData() {
       const [history, media] = await Promise.all([
         portalService.getPurchaseHistory(),
         portalService.getMedia({ page: 1, pageSize: 200 }),
@@ -25,7 +25,8 @@ export default function PurchasesPage() {
         map[item.id] = item;
       });
       setMediaMap(map);
-    })();
+    }
+    fetchData();
   }, []);
 
   return (

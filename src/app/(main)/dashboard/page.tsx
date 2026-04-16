@@ -43,7 +43,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    void load();
+    async function fetchData() {
+      await load();
+    }
+    fetchData();
   }, []);
 
   return (

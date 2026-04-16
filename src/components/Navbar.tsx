@@ -13,13 +13,28 @@ import {
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
 import { authClient } from "@/src/lib/auth-client";
+import { useEffect, useState } from "react";
+import { getStoredUser } from "@/src/lib/portal/storage";
+import type { UserRole } from "@/src/lib/portal/types";
+
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = authClient.useSession();
 
-  const currentUser = session?.user;
+  // Local state for user from localStorage
+  const [localUser, setLocalUser] = useState<{ id: string; name: string; email: string; role: UserRole } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setTimeout(() => {
+        setLocalUser(getStoredUser());
+      }, 0);
+    }
+  }, []);
+
+  const currentUser = session?.user || localUser;
   const currentUserRole = currentUser?.email?.toLowerCase() === "admin@ngv.local" ? "admin" : "user";
 
   const isActive = (path: string) => pathname === path;

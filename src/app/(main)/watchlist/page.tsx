@@ -12,7 +12,11 @@ export default function WatchlistPage() {
   const [items, setItems] = useState<MediaItem[]>([]);
 
   useEffect(() => {
-    void portalService.getWatchlist().then(setItems);
+    async function fetchData() {
+      const items = await portalService.getWatchlist();
+      setItems(items);
+    }
+    fetchData();
   }, []);
 
   return (

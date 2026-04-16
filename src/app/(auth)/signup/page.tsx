@@ -28,7 +28,7 @@ export default function Page() {
     try {
       await authFetchers.register(name.trim(), email.trim(), password);
       
-      window.location.href = "/"; 
+      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
     } finally {
@@ -49,8 +49,8 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md bg-zinc-900 rounded-lg p-8 border border-white/10 shadow-2xl">
-        <h1 className="text-white text-2xl mb-2 font-bold">Create Account</h1>
+      <div className="w-full max-w-md bg-zinc-900 rounded-lg p-8 border border-white/10">
+        <h1 className="text-white text-2xl mb-2">Create Account</h1>
         <p className="text-white/60 mb-6">Join NGV and start watching today</p>
 
         <form className="space-y-4" onSubmit={handleSignup}>
@@ -62,12 +62,12 @@ export default function Page() {
               type="text" 
               value={name} 
               onChange={(e) => setName(e.target.value)} 
-              placeholder="Jhon Doe" 
+              placeholder="Enter your full name" 
               className="mt-1 w-full bg-zinc-800 border border-white/10 text-white px-3 py-2 rounded focus:outline-none focus:border-[#E50914] transition" 
             />
           </div>
           <div>
-            <label htmlFor="email" className="text-white text-sm">Email Address</label>
+            <label htmlFor="email" className="text-white text-sm">Email</label>
             <input 
               required
               id="email" 

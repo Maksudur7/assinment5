@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/ca
 import { portalService } from "@/src/lib/portal";
 import type { PortalUser } from "@/src/lib/portal/types";
 
+
 export default function ProfilePage() {
   const [user, setUser] = useState<PortalUser | null>(null);
   const [watchlistCount, setWatchlistCount] = useState(0);
@@ -29,6 +30,13 @@ export default function ProfilePage() {
       setError(err instanceof Error ? err.message : "Failed to load profile data");
     }
   }
+
+  useEffect(() => {
+    async function fetchData() {
+      await load();
+    }
+    fetchData();
+  }, []);
 
 
   return (
