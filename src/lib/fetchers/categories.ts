@@ -1,4 +1,4 @@
-import { catalogVideos, type CatalogVideo } from "@/src/lib/data/catalog";
+import type { CatalogVideo } from "@/src/lib/data/catalog";
 
 export type CategoryItem = {
   slug: string;
@@ -32,19 +32,15 @@ function sortVideos(videos: CatalogVideo[], sort: CategorySort): CatalogVideo[] 
 }
 
 export async function fetchCategories(): Promise<CategoryItem[]> {
-  const counts = new Map<string, number>();
-
-  for (const video of catalogVideos) {
-    counts.set(video.category, (counts.get(video.category) ?? 0) + 1);
-  }
-
-  return [...counts.entries()]
-    .map(([label, count]) => ({
-      slug: label.toLowerCase().replace(/\s+/g, "-"),
-      label,
-      count,
-    }))
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  const res = await fetch("/api/categories");
+  if (!res.ok) throw new Error("Failed to fetch categories");
+  // Assuming backend returns [{ name: string, ... }]
+  const data = await res.json();
+  return data.map((cat: any) => ({
+    slug: cat.name.toLowerCase().replace(/\s+/g, "-"),
+    label: cat.name,
+    count: cat._count?.media || cat.mediaCount || 0,
+  }));
 }
 
 export async function fetchCategoryVideos(
@@ -57,30 +53,46 @@ export async function fetchCategoryVideos(
     sort = "trending",
   } = filters;
 
-  const normalizedQuery = query.trim().toLowerCase();
-
-  const filtered = catalogVideos.filter((video) => {
-    const matchesQuery =
-      normalizedQuery.length === 0 ||
-      video.title.toLowerCase().includes(normalizedQuery) ||
-      video.category.toLowerCase().includes(normalizedQuery);
-    const matchesCategory = category === "all" || video.category === category;
-    const matchesLanguage = language === "all" || video.language === language;
-
-    return matchesQuery && matchesCategory && matchesLanguage;
-  });
-
-  return sortVideos(filtered, sort);
+  // If category is not 'all', use category endpoint, else use /api/media
+  if (category !== "all") {
+    const url = `/api/categories/${encodeURIComponent(category)}/videos`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch category videos");
+    let videos: CatalogVideo[] = await res.json();
+    // Optionally filter by language/query client-side if backend doesn't support
+    if (language !== "all") {
+      videos = videos.filter((v) => v.language === language);
+    }
+    if (query.trim().length > 0) {
+      const q = query.trim().toLowerCase();
+      videos = videos.filter((v) => v.title.toLowerCase().includes(q));
+    }
+    // Optionally sort client-side if backend doesn't support
+    return videos;
+  } else {
+    // Use /api/media for all videos
+    const params = new URLSearchParams();
+    if (query) params.append("search", query);
+    if (language !== "all") params.append("language", language);
+    if (sort) params.append("sort", sort);
+    const url = `/api/media?${params.toString()}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch videos");
+    const data = await res.json();
+    return data.items || [];
+  }
 }
 
 export async function fetchCategoryHighlights() {
   const categories = await fetchCategories();
-  const videos = await fetchCategoryVideos({ sort: "popular" });
-
+  // Use /api/media?sort=popular for featured
+  const res = await fetch("/api/media?sort=popular&pageSize=6");
+  if (!res.ok) throw new Error("Failed to fetch highlights");
+  const data = await res.json();
   return {
-    totalTitles: catalogVideos.length,
+    totalTitles: data.total || 0,
     totalCategories: categories.length,
     topCategory: categories[0]?.label ?? "N/A",
-    featured: videos.slice(0, 6),
+    featured: data.items || [],
   };
 }
