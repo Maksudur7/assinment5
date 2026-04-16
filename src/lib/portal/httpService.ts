@@ -14,12 +14,12 @@ import type {
 import { getAuthToken } from "./storage";
 import { authClient } from "../auth-client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://ngv-backend.vercel.app/api";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAuthToken(); 
   // const API_URL = "https://ngv-backend.vercel.app/api";
-  const API_URL = "http://localhost:4000/api";
+  const API_URL = "https://ngv-backend.vercel.app/api";
 
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -48,16 +48,18 @@ export const httpPortalService: PortalService = {
     }),
 
   login: async (email, password) => {
-    // @ts-ignore
-    const { data, error } = await authClient.signIn.email({ email, password });
-    if (error) throw new Error(error.message);
-    return data;
+    const result = await authClient.signIn.email({ email, password });
+    return {
+      ...result.user,
+      role: (result.user.role ?? "user") as UserRole,
+    } as PortalUser;
   },
   register: async (name, email, password) => {
-    // @ts-ignore
-    const { data, error } = await authClient.signUp.email({ email, password, name });
-    if (error) throw new Error(error.message);
-    return data;
+    const result = await authClient.signUp.email({ email, password, name });
+    return {
+      ...result.user,
+      role: (result.user.role ?? "user") as UserRole,
+    } as PortalUser;
   },
   logout: async () => {
     await authClient.signOut();

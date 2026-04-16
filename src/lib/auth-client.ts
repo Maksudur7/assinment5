@@ -3,7 +3,7 @@ import { getAuthToken } from "./portal/storage";
 
 
 
-const BACKEND_AUTH_URL = "http://localhost:4000/api/auth";
+const BACKEND_AUTH_URL = "https://ngv-backend.vercel.app/api/auth";
 export const authClient = createAuthClient({
   baseURL: BACKEND_AUTH_URL,
   fetchOptions: {
