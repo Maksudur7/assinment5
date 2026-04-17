@@ -159,16 +159,41 @@ export function WatchClient({ id }: { id: string }) {
     await loadAll();
   }
 
+
   if (!media) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Media not found.</div>;
   }
+
+  // Helper to check if the streamingUrl is a YouTube link
+  function getYouTubeEmbedUrl(url: string) {
+    // Accepts both youtu.be and youtube.com links
+    const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/);
+    return ytMatch ? `https://www.youtube.com/embed/${ytMatch[1]}` : null;
+  }
+
+  const youTubeEmbedUrl = getYouTubeEmbedUrl(media.streamingUrl);
 
   return (
     <div className="min-h-screen bg-black pt-20">
       <div className="max-w-360 mx-auto px-6 py-6 grid lg:grid-cols-[1fr_360px] gap-6">
         <div className="space-y-6">
           <div className="rounded-lg overflow-hidden border border-white/10 bg-zinc-900">
-            <ImageWithFallback src={media.poster} alt={media.title} className="w-full aspect-video object-cover" />
+            {canStreamCurrent && youTubeEmbedUrl ? (
+              <div className="w-full aspect-video bg-black flex items-center justify-center">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={youTubeEmbedUrl}
+                  title={media.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+            ) : (
+              <ImageWithFallback src={media.poster} alt={media.title} className="w-full aspect-video object-cover" />
+            )}
             <div className="p-5">
               <h1 className="text-white text-3xl mb-2">{media.title}</h1>
               <p className="text-white/70 mb-2">{media.releaseYear} • {media.genres.join(" • ")} • {media.duration}</p>
@@ -192,25 +217,26 @@ export function WatchClient({ id }: { id: string }) {
               ) : null}
 
               <div className="flex flex-wrap gap-3">
-                {canStreamCurrent ? (
+                {canStreamCurrent && !youTubeEmbedUrl ? (
                   <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
                     <a href={media.streamingUrl} target="_blank" rel="noreferrer">Stream Now</a>
                   </Button>
-                ) : (
+                ) : null}
+                {!canStreamCurrent ? (
                   <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
                     <Link href="/subscription">Unlock Premium</Link>
                   </Button>
-                )}
+                ) : null}
                 <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={toggleWatchlist}>
                   {watchSaved ? "Remove from Watchlist" : "Add to Watchlist"}
                 </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("rent")}>
+                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("rent")}> 
                   Rent
                 </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("buy")}>
+                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("buy")}> 
                   Buy
                 </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("subscription")}>
+                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("subscription")}> 
                   Monthly Subscription
                 </Button>
               </div>
