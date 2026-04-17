@@ -16,9 +16,34 @@ import { canAccessMedia, getActiveSubscription } from "@/src/lib/portal/entitlem
 import { reviewFetchers } from "@/src/lib/fetchers/core";
 import type { MediaItem, PortalUser, PurchaseRecord, Review, ReviewComment } from "@/src/lib/portal/types";
 
-// Dummy real-time view/user count logic (replace with backend API if available)
-function getRandomInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+
+// Real-time view/user count API helpers
+async function incrementView(id: string) {
+  try {
+    const res = await fetch(`/api/media/${id}/increment-view`, { method: "POST" });
+    if (!res.ok) throw new Error("Failed to increment view");
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+async function decrementViewer(id: string) {
+  try {
+    const res = await fetch(`/api/media/${id}/decrement-viewer`, { method: "POST" });
+    if (!res.ok) throw new Error("Failed to decrement viewer");
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+async function getViewStats(id: string) {
+  try {
+    const res = await fetch(`/api/media/${id}/view-stats`);
+    if (!res.ok) throw new Error("Failed to get view stats");
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 export function WatchClient({ id }: { id: string }) {
@@ -38,8 +63,8 @@ export function WatchClient({ id }: { id: string }) {
   const [myPurchases, setMyPurchases] = useState(0);
   const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
   // Real-time view/user count
-  const [viewCount, setViewCount] = useState(() => getRandomInt(100, 500));
-  const [userCount, setUserCount] = useState(() => getRandomInt(1, 10));
+  const [viewCount, setViewCount] = useState<number>(0);
+  const [userCount, setUserCount] = useState<number>(0);
 
   const loadAll = useCallback(async () => {
     const [me, item, list, purchaseHistory] = await Promise.all([
@@ -72,16 +97,30 @@ export function WatchClient({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      void loadAll();
+    let mounted = true;
+    // On mount: increment view count and start polling
+    incrementView(id).then((stats) => {
+      if (stats && mounted) {
+        setViewCount(stats.viewCount);
+        setUserCount(stats.currentViewers);
+      }
     });
-    // Simulate real-time view/user count updates
-    const interval = setInterval(() => {
-      setViewCount((v) => v + getRandomInt(0, 2));
-      setUserCount(getRandomInt(1, 10));
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [loadAll]);
+    // Poll for real-time stats
+    const poll = async () => {
+      const stats = await getViewStats(id);
+      if (stats && mounted) {
+        setViewCount(stats.viewCount);
+        setUserCount(stats.currentViewers);
+      }
+    };
+    const interval = setInterval(poll, 5000);
+    // On unmount: decrement viewer count
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      decrementViewer(id);
+    };
+  }, [id]);
 
   const related = useMemo(
     () => allMedia.filter((m) => m.id !== id).slice(0, 4),
