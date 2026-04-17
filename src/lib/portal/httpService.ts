@@ -7,7 +7,7 @@ import type {
   SocialProvider,
   UserRole,
 } from "./types";
-import { getAuthToken } from "./storage";
+import { getAuthToken, setAuthToken, setStoredUser } from "./storage";
 import { authClient } from "../auth-client";
 
 // const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://ngv-backend.vercel.app/api";
@@ -45,6 +45,14 @@ export const httpPortalService: PortalService = {
 
   login: async (email, password) => {
     const result = await authClient.signIn.email({ email, password });
+    // Save token if present
+    if (result.token) setAuthToken(result.token);
+    if (result.user) {
+      setStoredUser({
+        ...result.user,
+        role: ((result.user && "role" in result.user ? result.user.role : "user") as UserRole),
+      });
+    }
     const user = result.user as any;
     return {
       ...user,
@@ -53,6 +61,13 @@ export const httpPortalService: PortalService = {
   },
   register: async (name, email, password) => {
     const result = await authClient.signUp.email({ email, password, name });
+    if (result.token) setAuthToken(result.token);
+    if (result.user) {
+      setStoredUser({
+        ...result.user,
+        role: ((result.user && "role" in result.user ? result.user.role : "user") as UserRole),
+      });
+    }
     const user = result.user as any;
     return {
       ...user,
