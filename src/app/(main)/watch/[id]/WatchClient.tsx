@@ -16,6 +16,11 @@ import { canAccessMedia, getActiveSubscription } from "@/src/lib/portal/entitlem
 import { reviewFetchers } from "@/src/lib/fetchers/core";
 import type { MediaItem, PortalUser, PurchaseRecord, Review, ReviewComment } from "@/src/lib/portal/types";
 
+// Dummy real-time view/user count logic (replace with backend API if available)
+function getRandomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 export function WatchClient({ id }: { id: string }) {
   const [user, setUser] = useState<PortalUser | null>(null);
   const [media, setMedia] = useState<MediaItem | null>(null);
@@ -32,6 +37,9 @@ export function WatchClient({ id }: { id: string }) {
   const [watchSaved, setWatchSaved] = useState(false);
   const [myPurchases, setMyPurchases] = useState(0);
   const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
+  // Real-time view/user count
+  const [viewCount, setViewCount] = useState(() => getRandomInt(100, 500));
+  const [userCount, setUserCount] = useState(() => getRandomInt(1, 10));
 
   const loadAll = useCallback(async () => {
     const [me, item, list, purchaseHistory] = await Promise.all([
@@ -67,6 +75,12 @@ export function WatchClient({ id }: { id: string }) {
     queueMicrotask(() => {
       void loadAll();
     });
+    // Simulate real-time view/user count updates
+    const interval = setInterval(() => {
+      setViewCount((v) => v + getRandomInt(0, 2));
+      setUserCount(getRandomInt(1, 10));
+    }, 5000);
+    return () => clearInterval(interval);
   }, [loadAll]);
 
   const related = useMemo(
@@ -178,6 +192,11 @@ export function WatchClient({ id }: { id: string }) {
       <div className="max-w-360 mx-auto px-6 py-6 grid lg:grid-cols-[1fr_360px] gap-6">
         <div className="space-y-6">
           <div className="rounded-lg overflow-hidden border border-white/10 bg-zinc-900">
+            {/* Real-time stats */}
+            <div className="flex items-center gap-6 px-5 pt-4 pb-2">
+              <span className="text-white/80 text-sm">👁️ {viewCount} views</span>
+              <span className="text-white/80 text-sm">🟢 {userCount} watching now</span>
+            </div>
             {canStreamCurrent && youTubeEmbedUrl ? (
               <div className="w-full aspect-video bg-black flex items-center justify-center">
                 <iframe
