@@ -10,11 +10,10 @@ import type {
 import { getAuthToken, setAuthToken, setStoredUser } from "./storage";
 import { authClient } from "../auth-client";
 
-// const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://ngv-backend.vercel.app/api";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAuthToken();
-  const API_URL = "https://ngv-backend.vercel.app/api";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api";
 
   const res = await fetch(`${API_URL}${path}`, {
     ...init,

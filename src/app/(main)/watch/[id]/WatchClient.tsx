@@ -18,9 +18,11 @@ import type { MediaItem, PortalUser, PurchaseRecord, Review, ReviewComment } fro
 
 
 // Real-time view/user count API helpers
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+
 async function incrementView(id: string) {
   try {
-    const res = await fetch(`/api/media/${id}/increment-view`, { method: "POST" });
+    const res = await fetch(`${API_URL}/media/${id}/increment-view`, { method: "POST" });
     if (!res.ok) throw new Error("Failed to increment view");
     return await res.json();
   } catch {
@@ -29,7 +31,7 @@ async function incrementView(id: string) {
 }
 async function decrementViewer(id: string) {
   try {
-    const res = await fetch(`/api/media/${id}/decrement-viewer`, { method: "POST" });
+    const res = await fetch(`${API_URL}/media/${id}/decrement-viewer`, { method: "POST" });
     if (!res.ok) throw new Error("Failed to decrement viewer");
     return await res.json();
   } catch {
@@ -38,7 +40,7 @@ async function decrementViewer(id: string) {
 }
 async function getViewStats(id: string) {
   try {
-    const res = await fetch(`/api/media/${id}/view-stats`);
+    const res = await fetch(`${API_URL}/media/${id}/view-stats`);
     if (!res.ok) throw new Error("Failed to get view stats");
     return await res.json();
   } catch {
@@ -65,6 +67,9 @@ export function WatchClient({ id }: { id: string }) {
   // Real-time view/user count
   const [viewCount, setViewCount] = useState<number>(0);
   const [userCount, setUserCount] = useState<number>(0);
+
+
+  console.log('media', media)
 
   const loadAll = useCallback(async () => {
     const [me, item, list, purchaseHistory] = await Promise.all([
