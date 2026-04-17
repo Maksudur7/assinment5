@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Menu, Search, User } from "lucide-react";
+import { Bell, Menu, Search, User, Home, Film, LayoutDashboard, BadgeDollarSign, CreditCard, Shield } from "lucide-react";
 
 import { Button } from "./ui/button";
 import {
@@ -22,6 +22,9 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = authClient.useSession();
+
+  // State for mobile menu
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Local state for user from localStorage
   const [localUser, setLocalUser] = useState<{ id: string; name: string; email: string; role: UserRole } | null>(null);
@@ -68,53 +71,41 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-8">
             <Link
               href="/"
-              className={`${
-                isActive("/") ? "text-white" : "text-white/60"
-              } hover:text-white transition-colors`}
+              className={(isActive("/") ? "text-white" : "text-white/60") + " hover:text-white transition-colors"}
             >
-              Home
+              <span className="flex items-center gap-2"><Home className="w-5 h-5" /><span>Home</span></span>
             </Link>
             <Link
               href="/library"
-              className={`${
-                isActive("/library") ? "text-white" : "text-white/60"
-              } hover:text-white transition-colors`}
+              className={(isActive("/library") ? "text-white" : "text-white/60") + " hover:text-white transition-colors"}
             >
-              All Titles
+              <span className="flex items-center gap-2"><Film className="w-5 h-5" /><span>All Titles</span></span>
             </Link>
             <Link
               href="/dashboard"
-              className={`${
-                isActive("/dashboard") ? "text-white" : "text-white/60"
-              } hover:text-white transition-colors`}
+              className={(isActive("/dashboard") ? "text-white" : "text-white/60") + " hover:text-white transition-colors"}
             >
-              Dashboard
+              <span className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5" /><span>Dashboard</span></span>
             </Link>
             {currentUserRole === "admin" ? (
               <Link
                 href="/admin"
-                className={`${
-                  isActive("/admin") ? "text-white" : "text-white/60"
-                } hover:text-white transition-colors`}
+                className={(isActive("/admin") ? "text-white" : "text-white/60") + " hover:text-white transition-colors"}
               >
-                Admin
+                <span className="flex items-center gap-2"><Shield className="w-5 h-5" /><span>Admin</span></span>
               </Link>
             ) : null}
             <Link
               href="/subscription"
-              className={`${
-                isActive("/subscription") ? "text-white" : "text-white/60"
-              } hover:text-white transition-colors`}
+              className={(isActive("/subscription") ? "text-white" : "text-white/60") + " hover:text-white transition-colors"}
             >
-              Plans
+              <span className="flex items-center gap-2"><BadgeDollarSign className="w-5 h-5" /><span>Plans</span></span>
             </Link>
             <Link
               href="/card"
-              className={`${
-                isActive("/card") ? "text-white" : "text-white/60"
-              } hover:text-white transition-colors`}
+              className={(isActive("/card") ? "text-white" : "text-white/60") + " hover:text-white transition-colors"}
             >
-              Checkout
+              <span className="flex items-center gap-2"><CreditCard className="w-5 h-5" /><span>Checkout</span></span>
             </Link>
           </div>
 
@@ -179,9 +170,55 @@ export function Navbar() {
             </DropdownMenu>
 
             {/* Mobile Menu */}
-            <Button variant="ghost" size="icon" className="md:hidden text-white">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden text-white"
+              onClick={() => setMobileMenuOpen(true)}
+            >
               <Menu className="w-5 h-5" />
             </Button>
+            {/* Mobile Drawer */}
+            {mobileMenuOpen && (
+              <>
+                {/* Overlay */}
+                <div
+                  className="fixed inset-0 bg-black/70 z-[500]"
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+                <div className="fixed top-0 right-0 h-full w-64 bg-zinc-900 z-[1001] shadow-lg flex flex-col p-6 animate-in slide-in-from-right duration-200">
+                  <button
+                    className="self-end mb-8 text-white text-2xl"
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-label="Close menu"
+                  >
+                    ×
+                  </button>
+                  <nav className="flex flex-col bg-zinc-900 p-4 gap-6">
+                    <Link href="/" className="flex items-center gap-3 text-white text-lg" onClick={() => setMobileMenuOpen(false)}>
+                      <Home className="w-5 h-5" /> Home
+                    </Link>
+                    <Link href="/library" className="flex items-center gap-3 text-white text-lg" onClick={() => setMobileMenuOpen(false)}>
+                      <Film className="w-5 h-5" /> All Titles
+                    </Link>
+                    <Link href="/dashboard" className="flex items-center gap-3 text-white text-lg" onClick={() => setMobileMenuOpen(false)}>
+                      <LayoutDashboard className="w-5 h-5" /> Dashboard
+                    </Link>
+                    {currentUserRole === "admin" && (
+                      <Link href="/admin" className="flex items-center gap-3 text-white text-lg" onClick={() => setMobileMenuOpen(false)}>
+                        <Shield className="w-5 h-5" /> Admin
+                      </Link>
+                    )}
+                    <Link href="/subscription" className="flex items-center gap-3 text-white text-lg" onClick={() => setMobileMenuOpen(false)}>
+                      <BadgeDollarSign className="w-5 h-5" /> Plans
+                    </Link>
+                    <Link href="/card" className="flex items-center gap-3 text-white text-lg" onClick={() => setMobileMenuOpen(false)}>
+                      <CreditCard className="w-5 h-5" /> Checkout
+                    </Link>
+                  </nav>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
