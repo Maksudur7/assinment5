@@ -32,10 +32,12 @@ function sortVideos(videos: CatalogVideo[], sort: CategorySort): CatalogVideo[] 
 }
 
 export async function fetchCategories(): Promise<CategoryItem[]> {
-  const res = await fetch("/api/categories");
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  const res = await fetch(`${apiUrl}/categories`);
   if (!res.ok) throw new Error("Failed to fetch categories");
   // Assuming backend returns [{ name: string, ... }]
   const data = await res.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return data.map((cat: any) => ({
     slug: cat.name.toLowerCase().replace(/\s+/g, "-"),
     label: cat.name,

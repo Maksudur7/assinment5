@@ -13,9 +13,11 @@ import { authClient } from "../auth-client";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAuthToken();
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
-  const res = await fetch(`${API_URL}${path}`, {
+  // Ensure no double slash in URL
+  const url = path.startsWith("/") ? `${API_URL}${path}` : `${API_URL}/${path}`;
+  const res = await fetch(url, {
     ...init,
     headers: {
       "Content-Type": "application/json",
