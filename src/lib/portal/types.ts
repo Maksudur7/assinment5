@@ -1,6 +1,7 @@
 export type UserRole = "user" | "admin";
 
 export type PortalUser = {
+  user: any;
   id: string;
   name: string;
   email: string;

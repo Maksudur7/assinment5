@@ -3,7 +3,6 @@ import { portalService } from "../portal";
 import { setAuthToken, setStoredUser } from "../portal/storage";
 import {
   MediaQuery,
-  PaymentInput,
   PurchaseType,
   SocialProvider,
   UserRole,
@@ -14,13 +13,9 @@ function toPortalRole(user: Record<string, unknown>): UserRole {
   return (user.role as UserRole) || "user";
 }
 
-function getAuthErrorMessage(error: any, fallback: string): string {
-  return error?.message || fallback;
-}
-
 export const authFetchers = {
   async me() {
-    const sessionData = await authClient.getSession();
+    const sessionData = await portalService.getCurrentUser();
 
     console.log("my data ", sessionData);
 
@@ -39,24 +34,35 @@ export const authFetchers = {
   },
 
   async login(email: string, password: string) {
-    // সরাসরি রেজাল্ট নিন, { data, error } নয়
     const res = await authClient.signIn.email({
       email,
       password,
       callbackURL: "/",
     });
 
-    // Better Auth সফল হলে রেজাল্ট অবজেক্ট দেয়।
-    // যদি throw: true থাকে তবে এরর হলে catch-এ যাবে।
+    console.log("[DEBUG] login response:", res);
+
     if (!res) throw new Error("Login failed");
 
-    // সেশন টোকেন সেভ করা
-    const sessionToken = (res as any).token || (res as any).session?.token;
-    if (sessionToken) setAuthToken(sessionToken);
+    const sessionToken =
+      (res as any).token ||
+      (res as any).session?.token ||
+      (res as any).accessToken ||
+      (res as any).jwt;
+    console.log("[DEBUG] sessionToken:", sessionToken);
+    if (sessionToken) {
+      setAuthToken(sessionToken);
+      console.log("[DEBUG] setAuthToken called with:", sessionToken);
+    }
 
-    // ইউজার ডাটা সেভ করা
     if (res.user) {
       setStoredUser({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: (res.user as any).role || "user",
+      });
+      console.log("[DEBUG] setStoredUser called with:", {
         id: res.user.id,
         name: res.user.name,
         email: res.user.email,
@@ -68,7 +74,6 @@ export const authFetchers = {
   },
 
   async register(name: string, email: string, password: string) {
-    // সরাসরি রেজাল্ট নিন
     const res = await authClient.signUp.email({
       name,
       email,
@@ -76,13 +81,29 @@ export const authFetchers = {
       callbackURL: "/",
     });
 
+    console.log("[DEBUG] register response:", res);
+
     if (!res) throw new Error("Signup failed");
 
-    const sessionToken = (res as any).token || (res as any).session?.token;
-    if (sessionToken) setAuthToken(sessionToken);
+    const sessionToken =
+      (res as any).token ||
+      (res as any).session?.token ||
+      (res as any).accessToken ||
+      (res as any).jwt;
+    console.log("[DEBUG] sessionToken:", sessionToken);
+    if (sessionToken) {
+      setAuthToken(sessionToken);
+      console.log("[DEBUG] setAuthToken called with:", sessionToken);
+    }
 
     if (res.user) {
       setStoredUser({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: (res.user as any).role || "user",
+      });
+      console.log("[DEBUG] setStoredUser called with:", {
         id: res.user.id,
         name: res.user.name,
         email: res.user.email,
@@ -93,31 +114,30 @@ export const authFetchers = {
     return res;
   },
 
- async socialLogin(provider: SocialProvider) {
-    // সরাসরি রেজাল্ট নিন, { data, error } নয়
+  async socialLogin(provider: SocialProvider) {
+    // Directly return result, not { data, error }
     const res = await authClient.signIn.social({
       provider,
       callbackURL: "/",
     });
 
-    // Better Auth যদি এরর হয় তবে সে অটোমেটিক এরর থ্রো করবে (যেহেতু throw: true আছে)
+    // Better Auth will automatically throw error if any (since throw: true)
     if (!res) throw new Error("Social login failed");
 
-    // সেশন টোকেন সেভ করা (টাইপস্ক্রিপ্টের এরর এড়াতে as any ব্যবহার করা হয়েছে)
+    // Save session token (using as any to avoid TypeScript error)
     const sessionToken = (res as any).token || (res as any).session?.token;
     if (sessionToken) setAuthToken(sessionToken);
 
     return res;
   },
 
- async requestPasswordReset(email: string) {
+  async requestPasswordReset(email: string) {
     const redirectTo =
       typeof window !== "undefined"
         ? `${window.location.origin}/reset-password`
         : "/reset-password";
 
-    // আপনার এরর মেসেজ অনুযায়ী মেথডটি forgetPassword হওয়ার কথা। 
-    // যদি টাইপ এরর দেয় তবে সরাসরি এভাবে কল করুন:
+    // Call forgetPassword method directly if type error occurs.
     const res = await (authClient as any).forgetPassword({
       email,
       redirectTo,
@@ -129,22 +149,22 @@ export const authFetchers = {
   },
 
   async resetPassword(token: string, newPassword: string) {
-    // এখানেও সরাসরি রেজাল্ট নিন
+    // Directly return result here as well
     const res = await authClient.resetPassword({
-      token, // Better Auth অনেক সময় 'token' কে 'key' হিসেবে নিতে পারে, আপনার ভার্সন অনুযায়ী চেক করবেন
+      token,
       newPassword,
     });
 
     if (!res) throw new Error("Failed to reset password");
-    
+
     return res;
   },
 
   async logout() {
-    // signOut মেথডটিও সরাসরি কল করুন
+    // Call signOut method directly
     await authClient.signOut();
-    
-    // টোকেন ক্লিয়ার করে দিন
+
+    // Clear token
     setAuthToken("");
   },
 };
@@ -165,14 +185,14 @@ export const reviewFetchers = {
   deleteOwnUnpublished:
     portalService.deleteOwnUnpublishedReview.bind(portalService),
   toggleLike: portalService.toggleReviewLike.bind(portalService),
-  comment: (reviewId: string, content: string, parentCommentId?: string) =>
-    portalService.addComment(reviewId, content, parentCommentId),
+  comment: (reviewId: string, content: string) =>
+    portalService.addComment(reviewId, content),
   comments: (reviewId: string) => portalService.getComments(reviewId),
 };
 
 export const paymentFetchers = {
-  create: (type: PurchaseType, mediaId?: string, payment?: PaymentInput) =>
-    portalService.createPurchase(type, mediaId, payment),
+  create: (type: PurchaseType, mediaId?: string, payment?: any) =>
+    portalService.createPurchase(type, mediaId || "", payment ?? undefined),
   history: () => portalService.getPurchaseHistory(),
   all: () => portalService.getAllPurchases(),
   revoke: (purchaseId: string) => portalService.revokePurchase(purchaseId),

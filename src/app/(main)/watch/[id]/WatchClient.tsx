@@ -48,6 +48,9 @@ async function getViewStats(id: string) {
   }
 }
 
+
+import { Loader } from "lucide-react";
+
 export function WatchClient({ id }: { id: string }) {
   const [user, setUser] = useState<PortalUser | null>(null);
   const [media, setMedia] = useState<MediaItem | null>(null);
@@ -67,37 +70,56 @@ export function WatchClient({ id }: { id: string }) {
   // Real-time view/user count
   const [viewCount, setViewCount] = useState<number>(0);
   const [userCount, setUserCount] = useState<number>(0);
-
+  const [loading, setLoading] = useState(true);
 
   console.log('media', media)
 
   const loadAll = useCallback(async () => {
-    const [me, item, list, purchaseHistory] = await Promise.all([
-      portalService.getCurrentUser(),
-      portalService.getMediaById(id),
-      portalService.getMedia({ page: 1, pageSize: 20 }),
-      portalService.getPurchaseHistory(),
-    ]);
+    setLoading(true);
+    try {
+      const [meRaw, itemRaw, listRaw, purchaseHistoryRaw] = await Promise.all([
+        portalService.getCurrentUser(),
+        portalService.getMediaById(id),
+        portalService.getMedia({ page: 1, pageSize: 20 }),
+        portalService.getPurchaseHistory(),
+      ]);
 
-    setUser(me);
-    setMedia(item);
-    setAllMedia(list.items);
-    setMyPurchases(purchaseHistory.length);
-    setPurchaseHistory(purchaseHistory);
+      // Type guards and assertions
+      const me = (meRaw && typeof meRaw === "object" && "role" in meRaw) ? (meRaw as PortalUser) : null;
+      setUser(me as PortalUser | null);
 
-    if (item) {
-      const r = await portalService.getReviews(item.id, me.role === "admin");
-      setReviews(r);
-      const cmts: Record<string, ReviewComment[]> = {};
-      await Promise.all(
-        r.map(async (rev) => {
-          cmts[rev.id] = await portalService.getComments(rev.id);
-        }),
-      );
-      setComments(cmts);
+      const item = (itemRaw && typeof itemRaw === "object" && "id" in itemRaw) ? (itemRaw as MediaItem) : null;
+      setMedia(item as MediaItem | null);
 
-      const watchlist = await portalService.getWatchlist();
-      setWatchSaved(watchlist.some((w) => w.id === item.id));
+      const list = (listRaw && typeof listRaw === "object" && "items" in listRaw && Array.isArray((listRaw as { items?: unknown }).items)) ? (listRaw as { items: MediaItem[] }) : { items: [] };
+      setAllMedia(list.items as MediaItem[]);
+
+      const purchaseHistory = Array.isArray(purchaseHistoryRaw) ? (purchaseHistoryRaw as PurchaseRecord[]) : [];
+      setMyPurchases((purchaseHistory as PurchaseRecord[]).length);
+      setPurchaseHistory(purchaseHistory as PurchaseRecord[]);
+
+      if (item && me) {
+        // getReviews now expects only 1 argument (mediaId)
+        const rRaw = await portalService.getReviews(item.id);
+        const r = Array.isArray(rRaw) ? (rRaw as Review[]) : [];
+        setReviews(r as Review[]);
+        const cmts: Record<string, ReviewComment[]> = {};
+        await Promise.all(
+          (r as Review[]).map(async (rev: Review) => {
+            if (rev && rev.id) {
+              const cRaw = await portalService.getComments(rev.id);
+              cmts[rev.id] = Array.isArray(cRaw) ? (cRaw as ReviewComment[]) : [];
+            }
+          }),
+        );
+        setComments(cmts);
+
+        const watchlistRaw = await portalService.getWatchlist();
+        const watchlist = Array.isArray(watchlistRaw) ? (watchlistRaw as MediaItem[]) : [];
+        setWatchSaved((watchlist as MediaItem[]).some((w: MediaItem) => w && w.id === item.id));
+      }
+    } finally {
+      setLoading(false);
     }
   }, [id]);
 
@@ -125,6 +147,12 @@ export function WatchClient({ id }: { id: string }) {
       clearInterval(interval);
       decrementViewer(id);
     };
+  }, [id]);
+
+  // Initial data load
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const related = useMemo(
@@ -187,10 +215,10 @@ export function WatchClient({ id }: { id: string }) {
     await loadAll();
   }
 
-  async function addComment(reviewId: string, parentCommentId?: string) {
+  async function addComment(reviewId: string) {
     const text = commentInput[reviewId]?.trim();
     if (!text) return;
-    await reviewFetchers.comment(reviewId, text, parentCommentId);
+    await reviewFetchers.comment(reviewId, text);
     setCommentInput((prev) => ({ ...prev, [reviewId]: "" }));
     setReplyTarget((prev) => ({ ...prev, [reviewId]: null }));
     await loadAll();
@@ -198,12 +226,18 @@ export function WatchClient({ id }: { id: string }) {
 
   async function toggleWatchlist() {
     if (!media) return;
-    const next = await portalService.toggleWatchlist(media.id);
-    setWatchSaved(next.saved);
+    const nextRaw = await portalService.toggleWatchlist(media.id);
+    // Defensive: nextRaw may be boolean or object
+    if (typeof nextRaw === "object" && nextRaw !== null && "saved" in nextRaw) {
+      setWatchSaved((nextRaw as { saved: boolean }).saved);
+    } else if (typeof nextRaw === "boolean") {
+      setWatchSaved(nextRaw);
+    }
   }
 
   async function purchase(type: "rent" | "buy" | "subscription") {
-    await portalService.createPurchase(type, media?.id);
+    if (!media) return;
+    await portalService.createPurchase(type, media.id, {} as Record<string, unknown>);
     await loadAll();
   }
 
@@ -217,6 +251,14 @@ export function WatchClient({ id }: { id: string }) {
     await loadAll();
   }
 
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black pt-24 flex items-center justify-center">
+        <Loader className="w-10 h-10 text-[#E50914] animate-spin" />
+      </div>
+    );
+  }
 
   if (!media) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Media not found.</div>;
@@ -360,7 +402,7 @@ export function WatchClient({ id }: { id: string }) {
                     <ThumbsUp className="w-3 h-3 mr-1" /> {review.likes}
                   </Button>
                   <Input value={commentInput[review.id] ?? ""} onChange={(e) => setCommentInput((p) => ({ ...p, [review.id]: e.target.value }))} className="bg-zinc-800 border-white/10 text-white max-w-sm h-8" placeholder="Add comment" />
-                  <Button size="sm" onClick={() => addComment(review.id, replyTarget[review.id] ?? undefined)} className="bg-[#E50914] hover:bg-[#B2070F]"><MessageCircle className="w-3 h-3 mr-1" />{replyTarget[review.id] ? "Reply" : "Comment"}</Button>
+                  <Button size="sm" onClick={() => addComment(review.id)} className="bg-[#E50914] hover:bg-[#B2070F]"><MessageCircle className="w-3 h-3 mr-1" />{replyTarget[review.id] ? "Reply" : "Comment"}</Button>
                   {user?.role === "admin" && (
                     <>
                       {!review.isPublished ? (

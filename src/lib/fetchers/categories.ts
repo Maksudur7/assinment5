@@ -15,7 +15,10 @@ export type CategoryFilters = {
   sort?: CategorySort;
 };
 
-function sortVideos(videos: CatalogVideo[], sort: CategorySort): CatalogVideo[] {
+function sortVideos(
+  videos: CatalogVideo[],
+  sort: CategorySort,
+): CatalogVideo[] {
   const copied = [...videos];
 
   switch (sort) {
@@ -27,7 +30,9 @@ function sortVideos(videos: CatalogVideo[], sort: CategorySort): CatalogVideo[] 
       return copied.sort((a, b) => b.views - a.views);
     case "trending":
     default:
-      return copied.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || b.views - a.views);
+      return copied.sort(
+        (a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || b.views - a.views,
+      );
   }
 }
 
@@ -45,6 +50,8 @@ export async function fetchCategories(): Promise<CategoryItem[]> {
   }));
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+
 export async function fetchCategoryVideos(
   filters: CategoryFilters = {},
 ): Promise<CatalogVideo[]> {
@@ -55,40 +62,33 @@ export async function fetchCategoryVideos(
     sort = "trending",
   } = filters;
 
-  // If category is not 'all', use category endpoint, else use /api/media
+  let videos: CatalogVideo[] = [];
+
   if (category !== "all") {
-    const url = `/api/categories/${encodeURIComponent(category)}/videos`;
+    // Full path logic
+    const url = `${API_URL}/categories/${encodeURIComponent(category)}/videos`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch category videos");
-    let videos: CatalogVideo[] = await res.json();
-    // Optionally filter by language/query client-side if backend doesn't support
-    if (language !== "all") {
-      videos = videos.filter((v) => v.language === language);
-    }
-    if (query.trim().length > 0) {
-      const q = query.trim().toLowerCase();
-      videos = videos.filter((v) => v.title.toLowerCase().includes(q));
-    }
-    // Optionally sort client-side if backend doesn't support
-    return videos;
+    if (!res.ok) throw new Error("Failed");
+    videos = await res.json();
   } else {
-    // Use /api/media for all videos
+    // API_URL e already /api ache, tai ekhane extra /api hobe na
     const params = new URLSearchParams();
     if (query) params.append("search", query);
     if (language !== "all") params.append("language", language);
     if (sort) params.append("sort", sort);
-    const url = `/api/media?${params.toString()}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch videos");
+
+    const res = await fetch(`${API_URL}/media?${params.toString()}`);
     const data = await res.json();
-    return data.items || [];
+    videos = data.items || [];
   }
+
+  return sortVideos(videos, sort as CategorySort);
 }
 
 export async function fetchCategoryHighlights() {
   const categories = await fetchCategories();
   // Use /api/media?sort=popular for featured
-  const res = await fetch("/api/media?sort=popular&pageSize=6");
+  const res = await fetch(`${API_URL}/media?sort=popular&pageSize=6`);
   if (!res.ok) throw new Error("Failed to fetch highlights");
   const data = await res.json();
   return {

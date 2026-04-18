@@ -19,30 +19,33 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        setError("");
-        const [featuredData, trendingData, newReleasesData] = await Promise.all([
-          homeFetchers.getFeatured(),
-          homeFetchers.getTrending(),
-          homeFetchers.getNewReleases(),
-        ]);
+  console.log('media data ', featured?.id);
 
-        if (featuredData && featuredData.length > 0) {
-          setFeatured(featuredData[0]);
-        }
-        setTrending(trendingData.slice(0, 6));
-        setNewReleases(newReleasesData.slice(0, 6));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load content");
-      } finally {
-        setLoading(false);
+  // Refactored: Data loading logic in a separate function
+  async function loadHomePageData() {
+    try {
+      setLoading(true);
+      setError("");
+      const [featuredData, trendingData, newReleasesData] = await Promise.all([
+        homeFetchers.getFeatured(),
+        homeFetchers.getTrending(),
+        homeFetchers.getNewReleases(),
+      ]);
+
+      if (featuredData && featuredData.length > 0) {
+        setFeatured(featuredData[0]);
       }
+      setTrending(trendingData.slice(0, 6));
+      setNewReleases(newReleasesData.slice(0, 6));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load content");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    void load();
+  useEffect(() => {
+    void loadHomePageData();
   }, []);
 
   if (error) {
