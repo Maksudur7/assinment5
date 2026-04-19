@@ -42,11 +42,11 @@ export default function AdminPage() {
   async function load() {
     const [me, adminOverview, mediaResult, reviews, comments, purchaseHistory] = await Promise.all([
       portalService.getCurrentUser(),
-      portalService.getAdminOverview(),
-      portalService.getMedia({ page: 1, pageSize: 100 }),
-      portalService.getPendingReviews(),
-      portalService.getPendingComments(),
-      portalService.getAllPurchases(),
+      portalService.getAdminOverview() as Promise<AdminOverview>,
+      portalService.getMedia({ page: 1, pageSize: 100 }) as Promise<{ items: MediaItem[] }>,
+      portalService.getPendingReviews() as Promise<Review[]>,
+      portalService.getPendingComments() as Promise<ReviewComment[]>,
+      portalService.getAllPurchases() as Promise<Array<{ id: string; type: string; amount: number; status: string; createdAt: string }>>,
     ]);
 
     setUser(me);

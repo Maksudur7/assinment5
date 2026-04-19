@@ -24,8 +24,8 @@ export default function ProfilePage() {
         portalService.getPurchaseHistory(),
       ]);
       setUser(u);
-      setWatchlistCount(w.length);
-      setPurchaseCount(p.length);
+      setWatchlistCount((w as import("@/src/lib/portal/types").MediaItem[]).length);
+      setPurchaseCount((p as import("@/src/lib/portal/types").PurchaseRecord[]).length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load profile data");
     }

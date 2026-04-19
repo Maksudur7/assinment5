@@ -22,16 +22,18 @@ export default function DashboardPage() {
     try {
       const [me, watchlist, purchases] = await Promise.all([
         portalService.getCurrentUser(),
-        portalService.getWatchlist(),
-        portalService.getPurchaseHistory(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        portalService.getWatchlist() as Promise<any[]>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        portalService.getPurchaseHistory() as Promise<any[]>,
       ]);
 
       setUser(me);
       setWatchlistCount(watchlist.length);
       setPurchaseCount(purchases.length);
 
-      if (me.role === "admin") {
-        const data = await portalService.getAdminOverview();
+      if (me && me.role === "admin") {
+        const data = await portalService.getAdminOverview() as AdminOverview;
         setAdminOverview(data);
       } else {
         setAdminOverview(null);

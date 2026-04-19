@@ -24,7 +24,7 @@ export default function SubscriptionPage() {
         paymentFetchers.history(),
       ]);
       setUser(me);
-      setHistory(purchases);
+      setHistory(purchases as PurchaseRecord[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load subscription status.");
     }

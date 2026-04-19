@@ -54,10 +54,11 @@ export default function LibraryPage() {
       portalService.getCurrentUser(),
       portalService.getPurchaseHistory(),
     ]);
-    setItems(result.items);
-    setTotal(result.total);
-    setUserRole(me.role);
-    setPurchaseHistory(purchases);
+    const paginated = result as import("@/src/lib/portal/types").Paginated<import("@/src/lib/portal/types").MediaItem>;
+    setItems(paginated.items);
+    setTotal(paginated.total);
+    setUserRole(me?.role ?? "user");
+    setPurchaseHistory(purchases as import("@/src/lib/portal/types").PurchaseRecord[]);
   }
 
   useEffect(() => {

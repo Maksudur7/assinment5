@@ -14,7 +14,7 @@ export default function WatchlistPage() {
   useEffect(() => {
     async function fetchData() {
       const items = await portalService.getWatchlist();
-      setItems(items);
+      setItems(items as MediaItem[]);
     }
     fetchData();
   }, []);

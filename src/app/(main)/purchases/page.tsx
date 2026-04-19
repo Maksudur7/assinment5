@@ -19,9 +19,10 @@ export default function PurchasesPage() {
         portalService.getPurchaseHistory(),
         portalService.getMedia({ page: 1, pageSize: 200 }),
       ]);
-      setItems(history);
+      setItems(history as PurchaseRecord[]);
       const map: Record<string, MediaItem> = {};
-      media.items.forEach((item) => {
+      const paginated = media as import("@/src/lib/portal/types").Paginated<import("@/src/lib/portal/types").MediaItem>;
+      paginated.items.forEach((item) => {
         map[item.id] = item;
       });
       setMediaMap(map);
