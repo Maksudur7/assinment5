@@ -6,6 +6,7 @@ import { Badge } from "./ui/badge";
 interface VideoCardProps {
   id: string;
   title: string;
+  description?: string;
   thumbnail: string;
   duration?: string;
   rating?: number;
@@ -18,7 +19,9 @@ interface VideoCardProps {
 }
 
 export function VideoCard({
+  id,
   title,
+  description,
   thumbnail,
   duration,
   rating,
@@ -31,7 +34,8 @@ export function VideoCard({
 }: VideoCardProps) {
   return (
     <div
-      className="group relative cursor-pointer rounded-lg overflow-hidden bg-card text-card-foreground transition-all duration-300 hover:scale-105 hover:z-10"
+      data-media-id={id}
+      className="group relative h-full cursor-pointer rounded-lg overflow-hidden border border-border bg-card text-card-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
       onClick={onClick}
     >
       <div className="relative aspect-2/3 overflow-hidden">
@@ -41,7 +45,7 @@ export function VideoCard({
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+        <div className="absolute inset-0 bg-linear-to-t from-background via-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <div className="bg-primary rounded-full p-3">
             <Play className="w-6 h-6 text-primary-foreground fill-primary-foreground" />
           </div>
@@ -82,9 +86,12 @@ export function VideoCard({
         )}
       </div>
 
-      <div className="p-3">
-        <h3 className="text-white line-clamp-2 mb-1">{title}</h3>
-        <div className="flex items-center gap-3 text-white/60 text-sm">
+      <div className="flex h-full min-h-36 flex-col p-3">
+        <h3 className="text-foreground line-clamp-2 mb-1">{title}</h3>
+        <p className="text-muted-foreground text-xs line-clamp-2 min-h-8 mb-2">
+          {description ?? "Explore ratings, cast and details for this title."}
+        </p>
+        <div className="flex items-center gap-3 text-muted-foreground text-sm">
           {year && <span>{year}</span>}
           {rating && (
             <div className="flex items-center gap-1">
@@ -93,6 +100,16 @@ export function VideoCard({
             </div>
           )}
         </div>
+        <button
+          type="button"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-border bg-background/60 px-3 py-1.5 text-sm text-foreground hover:bg-accent transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
+        >
+          View Details
+        </button>
       </div>
     </div>
   );

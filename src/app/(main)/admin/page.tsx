@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BarChart3, Clapperboard, DollarSign, EyeOff, Shield, Trash2, Upload, UserCheck, XCircle } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
@@ -28,6 +28,9 @@ const EMPTY_FORM = {
   duration: "2h 00m",
 };
 
+const MEDIA_PAGE_SIZE = 8;
+const SALES_PAGE_SIZE = 8;
+
 export default function AdminPage() {
   const [user, setUser] = useState<PortalUser | null>(null);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
@@ -38,6 +41,10 @@ export default function AdminPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [mediaSearch, setMediaSearch] = useState("");
+  const [mediaPage, setMediaPage] = useState(1);
+  const [salesStatusFilter, setSalesStatusFilter] = useState<"all" | "active" | "expired" | "revoked" | "refunded">("all");
+  const [salesPage, setSalesPage] = useState(1);
 
   async function load() {
     const [me, adminOverview, mediaResult, reviews, comments, purchaseHistory] = await Promise.all([
@@ -161,6 +168,31 @@ export default function AdminPage() {
     await load();
   }
 
+  const filteredMedia = useMemo(() => {
+    const q = mediaSearch.trim().toLowerCase();
+    if (!q) return media;
+    return media.filter((m) => m.title.toLowerCase().includes(q) || String(m.releaseYear).includes(q));
+  }, [media, mediaSearch]);
+
+  const mediaTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredMedia.length / MEDIA_PAGE_SIZE)), [filteredMedia.length]);
+
+  const paginatedMedia = useMemo(() => {
+    const start = (mediaPage - 1) * MEDIA_PAGE_SIZE;
+    return filteredMedia.slice(start, start + MEDIA_PAGE_SIZE);
+  }, [filteredMedia, mediaPage]);
+
+  const filteredSales = useMemo(() => {
+    if (salesStatusFilter === "all") return purchases;
+    return purchases.filter((p) => p.status === salesStatusFilter);
+  }, [purchases, salesStatusFilter]);
+
+  const salesTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredSales.length / SALES_PAGE_SIZE)), [filteredSales.length]);
+
+  const paginatedSales = useMemo(() => {
+    const start = (salesPage - 1) * SALES_PAGE_SIZE;
+    return filteredSales.slice(start, start + SALES_PAGE_SIZE);
+  }, [filteredSales, salesPage]);
+
   if (!user) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Loading admin console...</div>;
   }
@@ -273,13 +305,25 @@ export default function AdminPage() {
                 <CardTitle className="text-white">Current Media Library</CardTitle>
                 <CardDescription>Update or remove titles from catalog</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Input
+                    value={mediaSearch}
+                    onChange={(e) => {
+                      setMediaSearch(e.target.value);
+                      setMediaPage(1);
+                    }}
+                    placeholder="Filter by title or year"
+                    className="max-w-xs bg-zinc-800 border-white/10 text-white"
+                  />
+                  <p className="text-white/60 text-sm">Page {mediaPage} of {mediaTotalPages}</p>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/10"><TableHead className="text-white">Title</TableHead><TableHead className="text-white">Year</TableHead><TableHead className="text-white">Actions</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
-                    {media.map((m) => (
+                    {paginatedMedia.map((m) => (
                       <TableRow key={m.id} className="border-white/10">
                         <TableCell className="text-white">{m.title}</TableCell>
                         <TableCell className="text-white/70">{m.releaseYear}</TableCell>
@@ -291,6 +335,26 @@ export default function AdminPage() {
                     ))}
                   </TableBody>
                 </Table>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-white/5 border-white/10 text-white"
+                    disabled={mediaPage <= 1}
+                    onClick={() => setMediaPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-white/5 border-white/10 text-white"
+                    disabled={mediaPage >= mediaTotalPages}
+                    onClick={() => setMediaPage((p) => Math.min(mediaTotalPages, p + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -357,11 +421,29 @@ export default function AdminPage() {
                 <CardTitle className="text-white">Sales / Rental Analytics</CardTitle>
                 <CardDescription>Optional refunds & access revocation controls included</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="grid md:grid-cols-3 gap-3 mb-4">
                   <div className="rounded-md bg-black/30 border border-white/10 p-3"><p className="text-white/60 text-sm">Total Sales</p><p className="text-white text-2xl">{overview?.totalSales ?? 0}</p></div>
                   <div className="rounded-md bg-black/30 border border-white/10 p-3"><p className="text-white/60 text-sm">Total Rentals</p><p className="text-white text-2xl">{overview?.totalRentals ?? 0}</p></div>
                   <div className="rounded-md bg-black/30 border border-white/10 p-3"><p className="text-white/60 text-sm">Active Purchases</p><p className="text-white text-2xl">{overview?.activePurchases ?? 0}</p></div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <select
+                    value={salesStatusFilter}
+                    onChange={(e) => {
+                      setSalesStatusFilter(e.target.value as typeof salesStatusFilter);
+                      setSalesPage(1);
+                    }}
+                    className="rounded-md bg-zinc-800 border border-white/10 text-white px-3 py-2 text-sm"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                    <option value="revoked">Revoked</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                  <p className="text-white/60 text-sm">Page {salesPage} of {salesTotalPages}</p>
                 </div>
 
                 <Table>
@@ -369,7 +451,7 @@ export default function AdminPage() {
                     <TableRow className="border-white/10"><TableHead className="text-white">Type</TableHead><TableHead className="text-white">Amount</TableHead><TableHead className="text-white">Status</TableHead><TableHead className="text-white">Date</TableHead><TableHead className="text-white">Actions</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
-                    {purchases.map((p) => (
+                    {paginatedSales.map((p) => (
                       <TableRow key={p.id} className="border-white/10">
                         <TableCell className="text-white uppercase">{p.type}</TableCell>
                         <TableCell className="text-white">${p.amount.toFixed(2)}</TableCell>
@@ -386,6 +468,26 @@ export default function AdminPage() {
                     ))}
                   </TableBody>
                 </Table>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-white/5 border-white/10 text-white"
+                    disabled={salesPage <= 1}
+                    onClick={() => setSalesPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-white/5 border-white/10 text-white"
+                    disabled={salesPage >= salesTotalPages}
+                    onClick={() => setSalesPage((p) => Math.min(salesTotalPages, p + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
