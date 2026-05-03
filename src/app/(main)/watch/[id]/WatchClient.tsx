@@ -275,9 +275,9 @@ export function WatchClient({ id }: { id: string }) {
 
   return (
     <div className="min-h-screen bg-black pt-20">
-      <div className="max-w-360 mx-auto px-6 py-6 grid lg:grid-cols-[1fr_360px] gap-6">
+      <div className="max-w-360 mx-auto px-0 lg:px-6 py-6 grid lg:grid-cols-[1fr_360px] gap-6">
         <div className="space-y-6">
-          <div className="rounded-lg overflow-hidden border border-white/10 bg-zinc-900">
+          <div className="rounded-lg overflow-hidden  border border-white/10 bg-zinc-900">
             {/* Real-time stats */}
             <div className="flex items-center gap-6 px-5 pt-4 pb-2">
               <span className="text-white/80 text-sm">👁️ {viewCount} views</span>
