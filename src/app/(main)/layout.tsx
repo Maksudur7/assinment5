@@ -7,7 +7,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="dark min-h-screen bg-black">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <Navbar />
       <main>{children}</main>
       <Footer />

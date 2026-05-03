@@ -188,24 +188,24 @@ export function CardCheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black pt-20">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300 pt-20">
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        <div className="rounded-lg bg-zinc-900 border border-white/10 p-6">
-          <h1 className="text-white text-3xl mb-2">Subscription Checkout</h1>
-          <p className="text-white/60">Complete payment with Visa, Debit Card, Credit Card, bKash, Nagad, or Rocket.</p>
+        <div className="rounded-lg bg-card border border-border p-6 transition-colors duration-300">
+          <h1 className="text-foreground text-3xl mb-2">Subscription Checkout</h1>
+          <p className="text-muted-foreground">Complete payment with Visa, Debit Card, Credit Card, bKash, Nagad, or Rocket.</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Badge className="bg-[#E50914]">Plan: {selectedPlan === "yearly" ? "Yearly" : "Monthly"}</Badge>
-            <Badge className="bg-zinc-700">Amount: ${PLAN_PRICE[selectedPlan].toFixed(2)}</Badge>
-            <Badge className="bg-zinc-700">Real-time status enabled</Badge>
+            <Badge className="bg-primary text-primary-foreground">Plan: {selectedPlan === "yearly" ? "Yearly" : "Monthly"}</Badge>
+            <Badge className="bg-muted text-foreground">Amount: ${PLAN_PRICE[selectedPlan].toFixed(2)}</Badge>
+            <Badge className="bg-muted text-foreground">Real-time status enabled</Badge>
           </div>
           <div className="mt-4">
-            <Link href="/subscription" className="text-sm text-white/70 hover:text-white underline underline-offset-4">Back to subscription plans</Link>
+            <Link href="/subscription" className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">Back to subscription plans</Link>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 bg-zinc-900 border-white/10">
-            <CardHeader><CardTitle className="text-white">Payment Information</CardTitle></CardHeader>
+          <Card className="lg:col-span-2 bg-card border-border">
+            <CardHeader><CardTitle className="text-foreground">Payment Information</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-3">
                 {Object.entries(methodLabels).map(([value, label]) => (
@@ -213,7 +213,7 @@ export function CardCheckoutPage() {
                     key={value}
                     type="button"
                     onClick={() => setMethod(value as PaymentMethod)}
-                    className={`rounded-lg border px-4 py-3 text-left transition ${method === value ? "border-[#E50914] bg-[#E50914]/10 text-white" : "border-white/10 bg-zinc-800 text-white/80 hover:bg-zinc-700"}`}
+                    className={`rounded-lg border px-4 py-3 text-left transition ${method === value ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted text-foreground hover:bg-muted/80"}`}
                   >
                     <span className="flex items-center gap-2">
                       {WALLET_METHODS.includes(value as PaymentMethod) ? <Wallet className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
@@ -225,52 +225,52 @@ export function CardCheckoutPage() {
 
               {isWalletMethod ? (
                 <div className="space-y-2">
-                  <label className="text-sm text-white/80">Wallet Number</label>
-                  <Input value={walletNumber} onChange={(e) => setWalletNumber(e.target.value)} className="bg-zinc-800 border-white/10 text-white" placeholder="01XXXXXXXXX" />
+                  <label className="text-sm text-foreground">Wallet Number</label>
+                  <Input value={walletNumber} onChange={(e) => setWalletNumber(e.target.value)} className="bg-input border-border text-foreground" placeholder="01XXXXXXXXX" />
                 </div>
               ) : (
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <label className="text-sm text-white/80">Card Number</label>
-                    <Input value={cardNumber} onChange={(e) => setCardNumber(maskCard(e.target.value))} className="bg-zinc-800 border-white/10 text-white" placeholder="1234 5678 9012 3456" />
+                    <label className="text-sm text-foreground">Card Number</label>
+                    <Input value={cardNumber} onChange={(e) => setCardNumber(maskCard(e.target.value))} className="bg-input border-border text-foreground" placeholder="1234 5678 9012 3456" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm text-white/80">Card Holder Name</label>
-                    <Input value={cardHolder} onChange={(e) => setCardHolder(e.target.value)} className="bg-zinc-800 border-white/10 text-white" placeholder="Name on card" />
+                    <label className="text-sm text-foreground">Card Holder Name</label>
+                    <Input value={cardHolder} onChange={(e) => setCardHolder(e.target.value)} className="bg-input border-border text-foreground" placeholder="Name on card" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <label className="text-sm text-white/80">Expiry (MM/YY)</label>
-                      <Input value={expiry} onChange={(e) => setExpiry(e.target.value)} className="bg-zinc-800 border-white/10 text-white" placeholder="MM/YY" />
+                      <label className="text-sm text-foreground">Expiry (MM/YY)</label>
+                      <Input value={expiry} onChange={(e) => setExpiry(e.target.value)} className="bg-input border-border text-foreground" placeholder="MM/YY" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-white/80">CVV</label>
-                      <Input value={cvv} onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))} className="bg-zinc-800 border-white/10 text-white" placeholder="***" />
+                      <label className="text-sm text-foreground">CVV</label>
+                      <Input value={cvv} onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))} className="bg-input border-border text-foreground" placeholder="***" />
                     </div>
                   </div>
                 </div>
               )}
 
-              <label className="inline-flex items-center gap-2 text-sm text-white/70">
+              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <input type="checkbox" checked={emailReceipt} onChange={(e) => setEmailReceipt(e.target.checked)} />
                 Send receipt by email
               </label>
 
-              <Button onClick={handleCheckout} disabled={submitting} className="w-full bg-[#E50914] hover:bg-[#B2070F]">
+              <Button onClick={handleCheckout} disabled={submitting} className="w-full bg-primary hover:bg-primary/80 text-primary-foreground">
                 {submitting ? <span className="inline-flex items-center"><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing payment...</span> : "Pay and activate subscription"}
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-white/10">
-            <CardHeader><CardTitle className="text-white">Checkout Status</CardTitle></CardHeader>
-            <CardContent className="space-y-3 text-sm text-white/80">
-              <p><span className="text-white/50">Checkout ID:</span> {checkout?.checkoutId ?? "Not started"}</p>
-              <p><span className="text-white/50">Status:</span> {status ?? "N/A"}</p>
-              <p><span className="text-white/50">Transaction:</span> {statusInfo?.transactionId ?? checkout?.transactionId ?? "N/A"}</p>
-              {statusInfo?.paidAt ? <p><span className="text-white/50">Paid At:</span> {new Date(statusInfo.paidAt).toLocaleString()}</p> : null}
+          <Card className="bg-card border-border">
+            <CardHeader><CardTitle className="text-foreground">Checkout Status</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p><span className="text-muted-foreground">Checkout ID:</span> {checkout?.checkoutId ?? "Not started"}</p>
+              <p><span className="text-muted-foreground">Status:</span> {status ?? "N/A"}</p>
+              <p><span className="text-muted-foreground">Transaction:</span> {statusInfo?.transactionId ?? checkout?.transactionId ?? "N/A"}</p>
+              {statusInfo?.paidAt ? <p><span className="text-muted-foreground">Paid At:</span> {new Date(statusInfo.paidAt).toLocaleString()}</p> : null}
 
-              <Button type="button" variant="outline" className="w-full bg-zinc-800 border-white/10 text-white" disabled={!checkout?.checkoutId || loadingStatus} onClick={() => checkout?.checkoutId && void pollStatus(checkout.checkoutId)}>
+              <Button type="button" variant="outline" className="w-full bg-input border-border text-foreground" disabled={!checkout?.checkoutId || loadingStatus} onClick={() => checkout?.checkoutId && void pollStatus(checkout.checkoutId)}>
                 {loadingStatus ? "Refreshing..." : "Refresh status now"}
               </Button>
 
@@ -284,7 +284,7 @@ export function CardCheckoutPage() {
           </Card>
         </div>
 
-        {error ? <div className="rounded-md border border-red-500/40 bg-red-900/20 p-3 text-sm text-red-300">{error}</div> : null}
+        {error ? <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">{error}</div> : null}
       </div>
     </div>
   );

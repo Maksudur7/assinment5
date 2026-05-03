@@ -31,7 +31,7 @@ export function VideoCard({
 }: VideoCardProps) {
   return (
     <div
-      className="group relative cursor-pointer rounded-lg overflow-hidden bg-zinc-900 transition-all duration-300 hover:scale-105 hover:z-10"
+      className="group relative cursor-pointer rounded-lg overflow-hidden bg-card text-card-foreground transition-all duration-300 hover:scale-105 hover:z-10"
       onClick={onClick}
     >
       <div className="relative aspect-2/3 overflow-hidden">
@@ -41,18 +41,18 @@ export function VideoCard({
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <div className="bg-[#E50914] rounded-full p-3">
-            <Play className="w-6 h-6 text-white fill-white" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div className="bg-primary rounded-full p-3">
+            <Play className="w-6 h-6 text-primary-foreground fill-primary-foreground" />
           </div>
         </div>
 
         <div className="absolute top-2 left-2 flex gap-2">
           {isNew && (
-            <Badge className="bg-[#E50914] text-white border-0">NEW</Badge>
+            <Badge className="bg-primary text-primary-foreground border-0">NEW</Badge>
           )}
           {category && (
-            <Badge variant="outline" className="bg-black/60 border-white/20 text-white backdrop-blur-sm">
+            <Badge variant="outline" className="bg-background/60 border-border text-foreground backdrop-blur-sm">
               {category}
             </Badge>
           )}
@@ -66,7 +66,7 @@ export function VideoCard({
               </Badge>
             ) : null}
             {typeof isLocked === "boolean" ? (
-              <Badge variant="outline" className="bg-black/60 border-white/20 text-white backdrop-blur-sm">
+              <Badge variant="outline" className="bg-background/60 border-border text-foreground backdrop-blur-sm">
                 {isLocked ? <Lock className="w-3 h-3 mr-1" /> : <Unlock className="w-3 h-3 mr-1" />}
                 {isLocked ? "Locked" : "Open"}
               </Badge>
@@ -75,7 +75,7 @@ export function VideoCard({
         ) : null}
 
         {duration && (
-          <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm px-2 py-1 rounded text-white text-xs flex items-center gap-1">
+          <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded text-foreground text-xs flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {duration}
           </div>

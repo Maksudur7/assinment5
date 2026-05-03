@@ -71,21 +71,21 @@ export default function LibraryPage() {
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
   return (
-    <div className="min-h-screen bg-black pt-20">
+    <div className="min-h-screen bg-background text-foreground pt-20 transition-colors duration-300">
       <div className="max-w-360 mx-auto px-6 py-8 space-y-6">
-        <div className="rounded-lg bg-zinc-900 border border-white/10 p-6">
-          <h1 className="text-white text-3xl mb-2">All Movies & Series</h1>
-          <p className="text-white/60">Search, filter and sort published media catalog.</p>
+          <div className="rounded-lg bg-card border border-border p-6 transition-colors duration-300">
+            <h1 className="text-foreground text-3xl mb-2">All Movies & Series</h1>
+            <p className="text-muted-foreground">Search, filter and sort published media catalog.</p>
         </div>
 
-        <div className="rounded-lg bg-zinc-900 border border-white/10 p-4 grid gap-3 lg:grid-cols-[1fr_140px_140px_120px_120px_140px_180px]">
+        <div className="rounded-lg bg-card border border-border p-4 grid gap-3 lg:grid-cols-[1fr_140px_140px_120px_120px_140px_180px] transition-colors duration-300">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-            <Input className="pl-9 bg-zinc-800 border-white/10 text-white" placeholder="Search title, director, cast" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input className="pl-9 bg-input border-border text-foreground" placeholder="Search title, director, cast" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </div>
           <Select value={genre} onValueChange={(v) => { setGenre(v); setPage(1); }}>
-            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Genre" /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+            <SelectTrigger className="bg-input border-border text-foreground"><SelectValue placeholder="Genre" /></SelectTrigger>
+            <SelectContent className="bg-input border-border text-foreground">
               <SelectItem value="all">All Genre</SelectItem>
               <SelectItem value="Action">Action</SelectItem>
               <SelectItem value="Drama">Drama</SelectItem>
@@ -94,8 +94,8 @@ export default function LibraryPage() {
             </SelectContent>
           </Select>
           <Select value={platform} onValueChange={(v) => { setPlatform(v); setPage(1); }}>
-            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Platform" /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+            <SelectTrigger className="bg-input border-border text-foreground"><SelectValue placeholder="Platform" /></SelectTrigger>
+            <SelectContent className="bg-input border-border text-foreground">
               <SelectItem value="all">All Platform</SelectItem>
               <SelectItem value="NGV">NGV</SelectItem>
               <SelectItem value="Netflix">Netflix</SelectItem>
@@ -104,8 +104,8 @@ export default function LibraryPage() {
             </SelectContent>
           </Select>
           <Select value={releaseYear} onValueChange={(v) => { setReleaseYear(v); setPage(1); }}>
-            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Year" /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+            <SelectTrigger className="bg-input border-border text-foreground"><SelectValue placeholder="Year" /></SelectTrigger>
+            <SelectContent className="bg-input border-border text-foreground">
               <SelectItem value="all">All Year</SelectItem>
               <SelectItem value="2024">2024</SelectItem>
               <SelectItem value="2023">2023</SelectItem>
@@ -113,8 +113,8 @@ export default function LibraryPage() {
             </SelectContent>
           </Select>
           <Select value={minRating} onValueChange={(v) => { setMinRating(v); setPage(1); }}>
-            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Min Rating" /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+            <SelectTrigger className="bg-input border-border text-foreground"><SelectValue placeholder="Min Rating" /></SelectTrigger>
+            <SelectContent className="bg-input border-border text-foreground">
               <SelectItem value="all">Any Rating</SelectItem>
               <SelectItem value="7">7+</SelectItem>
               <SelectItem value="8">8+</SelectItem>
@@ -122,8 +122,8 @@ export default function LibraryPage() {
             </SelectContent>
           </Select>
           <Select value={maxRating} onValueChange={(v) => { setMaxRating(v); setPage(1); }}>
-            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Max Rating" /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+            <SelectTrigger className="bg-input border-border text-foreground"><SelectValue placeholder="Max Rating" /></SelectTrigger>
+            <SelectContent className="bg-input border-border text-foreground">
               <SelectItem value="all">No Max</SelectItem>
               <SelectItem value="9">9</SelectItem>
               <SelectItem value="8">8</SelectItem>
@@ -131,8 +131,8 @@ export default function LibraryPage() {
             </SelectContent>
           </Select>
           <Select value={popularity} onValueChange={(v) => { setPopularity(v); setPage(1); }}>
-            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Popularity" /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+            <SelectTrigger className="bg-input border-border text-foreground"><SelectValue placeholder="Popularity" /></SelectTrigger>
+            <SelectContent className="bg-input border-border text-foreground">
               <SelectItem value="all">Any Popularity</SelectItem>
               <SelectItem value="50">50+ Reviews</SelectItem>
               <SelectItem value="100">100+ Reviews</SelectItem>
@@ -140,8 +140,8 @@ export default function LibraryPage() {
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(v) => { setSort(v as typeof sort); setPage(1); }}>
-            <SelectTrigger className="bg-zinc-800 border-white/10 text-white"><SelectValue placeholder="Sort" /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-white/10 text-white">
+            <SelectTrigger className="bg-input border-border text-foreground"><SelectValue placeholder="Sort" /></SelectTrigger>
+            <SelectContent className="bg-input border-border text-foreground">
               <SelectItem value="latest">Recent</SelectItem>
               <SelectItem value="highest-rated">Top Rated</SelectItem>
               <SelectItem value="most-reviewed">Most Reviewed</SelectItem>
@@ -150,8 +150,8 @@ export default function LibraryPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <Badge className="bg-[#E50914]">{total} titles</Badge>
-          <p className="text-white/60 text-sm">Page {page} of {totalPages}</p>
+          <Badge className="bg-primary text-primary-foreground">{total} titles</Badge>
+          <p className="text-muted-foreground text-sm">Page {page} of {totalPages}</p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">

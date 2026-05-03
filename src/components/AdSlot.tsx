@@ -20,10 +20,10 @@ export function AdSlot({ type, className = "" }: AdSlotProps) {
 
   return (
     <div
-      className={`bg-zinc-900 border border-white/5 rounded-lg flex flex-col items-center justify-center ${heights[type]} ${className}`}
+      className={`bg-card border border-border rounded-lg flex flex-col items-center justify-center ${heights[type]} ${className}`}
     >
-      <p className="text-white/40 text-sm">Advertisement</p>
-      <p className="text-white/20 text-xs mt-1">{dimensions[type]} Ad Slot</p>
+      <p className="text-muted-foreground text-sm">Advertisement</p>
+      <p className="text-muted-foreground/60 text-xs mt-1">{dimensions[type]} Ad Slot</p>
     </div>
   );
 }

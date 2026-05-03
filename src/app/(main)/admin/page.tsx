@@ -178,54 +178,54 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black pt-20">
-      <div className="max-w-[1440px] mx-auto px-6 py-8 space-y-6">
+    <div className="min-h-screen bg-background text-foreground pt-20 transition-colors duration-300">
+      <div className="max-w-360 mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-white text-3xl mb-2">Admin Console</h1>
           <p className="text-white/60">Role-based media library management, moderation, reporting and revenue controls.</p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4">
-          <Card className="bg-zinc-900 border-white/10">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-base flex items-center gap-2">
-                <Clapperboard className="w-4 h-4 text-[#E50914]" />
-                Total Media
-              </CardTitle>
-            </CardHeader>
-            <CardContent><p className="text-3xl text-white">{overview?.totalMedia ?? 0}</p></CardContent>
-          </Card>
+            <div className="grid md:grid-cols-4 gap-4">
+              <Card className="bg-zinc-900 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-base flex items-center gap-2">
+                    <Clapperboard className="w-4 h-4 text-[#E50914]" />
+                    Total Media
+                  </CardTitle>
+                </CardHeader>
+                <CardContent><p className="text-3xl text-foreground">{overview?.totalMedia ?? 0}</p></CardContent>
+              </Card>
 
-          <Card className="bg-zinc-900 border-white/10">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-base flex items-center gap-2">
-                <Shield className="w-4 h-4 text-[#E50914]" />
-                Pending Reviews
-              </CardTitle>
-            </CardHeader>
-            <CardContent><p className="text-3xl text-white">{overview?.pendingReviews ?? 0}</p></CardContent>
-          </Card>
+              <Card className="bg-zinc-900 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-base flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-[#E50914]" />
+                    Pending Reviews
+                  </CardTitle>
+                </CardHeader>
+                <CardContent><p className="text-3xl text-foreground">{overview?.pendingReviews ?? 0}</p></CardContent>
+              </Card>
 
-          <Card className="bg-zinc-900 border-white/10">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-base flex items-center gap-2">
-                <EyeOff className="w-4 h-4 text-[#E50914]" />
-                Hidden Comments
-              </CardTitle>
-            </CardHeader>
-            <CardContent><p className="text-3xl text-white">{overview?.hiddenComments ?? 0}</p></CardContent>
-          </Card>
+              <Card className="bg-zinc-900 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-base flex items-center gap-2">
+                    <EyeOff className="w-4 h-4 text-[#E50914]" />
+                    Hidden Comments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent><p className="text-3xl text-foreground">{overview?.hiddenComments ?? 0}</p></CardContent>
+              </Card>
 
-          <Card className="bg-zinc-900 border-white/10">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-base flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-[#E50914]" />
-                Revenue
-              </CardTitle>
-            </CardHeader>
-            <CardContent><p className="text-3xl text-white">${(overview?.totalRevenue ?? 0).toFixed(2)}</p></CardContent>
-          </Card>
-        </div>
+              <Card className="bg-zinc-900 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-base flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-[#E50914]" />
+                    Revenue
+                  </CardTitle>
+                </CardHeader>
+                <CardContent><p className="text-3xl text-foreground">${(overview?.totalRevenue ?? 0).toFixed(2)}</p></CardContent>
+              </Card>
+            </div>
 
         <Tabs defaultValue="media" className="space-y-6">
           <TabsList className="bg-zinc-900 border border-white/10">

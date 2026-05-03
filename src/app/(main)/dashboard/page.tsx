@@ -52,28 +52,28 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black pt-20">
+    <div className="min-h-screen bg-background text-foreground pt-20 transition-colors duration-300">
       <div className="max-w-300 mx-auto px-6 py-8 space-y-6">
-        <div className="rounded-lg border border-white/10 bg-zinc-900 p-6">
-          <h1 className="text-white text-3xl mb-2">Dashboard</h1>
-          <p className="text-white/60">Welcome back, {user?.name ?? "Viewer"}</p>
-          {error ? <p className="text-red-400 text-sm mt-2">{error}</p> : null}
+        <div className="rounded-lg border border-border bg-card p-6 transition-colors duration-300">
+          <h1 className="text-foreground text-3xl mb-2">Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {user?.name ?? "Viewer"}</p>
+          {error ? <p className="text-destructive text-sm mt-2">{error}</p> : null}
           <div className="mt-3">
-            <Badge className="bg-[#E50914] uppercase">{user?.role ?? "user"}</Badge>
+            <Badge className="bg-primary text-primary-foreground uppercase">{user?.role ?? "user"}</Badge>
           </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4">
-          <Card className="bg-zinc-900 border-white/10"><CardHeader><CardTitle className="text-white text-base flex items-center gap-2"><Bookmark className="w-4 h-4 text-[#E50914]" />Watchlist</CardTitle></CardHeader><CardContent><p className="text-white text-3xl">{watchlistCount}</p></CardContent></Card>
-          <Card className="bg-zinc-900 border-white/10"><CardHeader><CardTitle className="text-white text-base flex items-center gap-2"><ShoppingBag className="w-4 h-4 text-[#E50914]" />Purchases</CardTitle></CardHeader><CardContent><p className="text-white text-3xl">{purchaseCount}</p></CardContent></Card>
-          <Card className="bg-zinc-900 border-white/10"><CardHeader><CardTitle className="text-white text-base flex items-center gap-2"><Star className="w-4 h-4 text-[#E50914]" />Role Access</CardTitle></CardHeader><CardContent><p className="text-white text-3xl">{user?.role === "admin" ? "Full" : "User"}</p></CardContent></Card>
+          <Card className="bg-card border-border"><CardHeader><CardTitle className="text-foreground text-base flex items-center gap-2"><Bookmark className="w-4 h-4 text-primary" />Watchlist</CardTitle></CardHeader><CardContent><p className="text-foreground text-3xl">{watchlistCount}</p></CardContent></Card>
+          <Card className="bg-card border-border"><CardHeader><CardTitle className="text-foreground text-base flex items-center gap-2"><ShoppingBag className="w-4 h-4 text-primary" />Purchases</CardTitle></CardHeader><CardContent><p className="text-foreground text-3xl">{purchaseCount}</p></CardContent></Card>
+          <Card className="bg-card border-border"><CardHeader><CardTitle className="text-foreground text-base flex items-center gap-2"><Star className="w-4 h-4 text-primary" />Role Access</CardTitle></CardHeader><CardContent><p className="text-foreground text-3xl">{user?.role === "admin" ? "Full" : "User"}</p></CardContent></Card>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <Button asChild className="bg-[#E50914] hover:bg-[#B2070F]"><Link href="/library"><Film className="w-4 h-4 mr-2" />Browse Media</Link></Button>
-          <Button asChild variant="outline" className="bg-white/5 border-white/10 text-white"><Link href="/watchlist"><Bookmark className="w-4 h-4 mr-2" />My Watchlist</Link></Button>
-          <Button asChild variant="outline" className="bg-white/5 border-white/10 text-white"><Link href="/purchases"><ShoppingBag className="w-4 h-4 mr-2" />Purchase History</Link></Button>
-          <Button asChild variant="outline" className="bg-white/5 border-white/10 text-white"><Link href="/profile"><MessageSquare className="w-4 h-4 mr-2" />Profile</Link></Button>
+          <Button asChild className="bg-primary hover:bg-primary/80 text-primary-foreground"><Link href="/library"><Film className="w-4 h-4 mr-2" />Browse Media</Link></Button>
+          <Button asChild variant="outline" className="bg-card border-border text-foreground"><Link href="/watchlist"><Bookmark className="w-4 h-4 mr-2" />My Watchlist</Link></Button>
+          <Button asChild variant="outline" className="bg-card border-border text-foreground"><Link href="/purchases"><ShoppingBag className="w-4 h-4 mr-2" />Purchase History</Link></Button>
+          <Button asChild variant="outline" className="bg-card border-border text-foreground"><Link href="/profile"><MessageSquare className="w-4 h-4 mr-2" />Profile</Link></Button>
         </div>
 
         {user?.role === "admin" ? (

@@ -82,7 +82,7 @@ export default function Page() {
       ) : featured ? (
         <>
           {/* Hero Banner */}
-          <div className="relative h-[600px] mb-12">
+          <div className="relative h-[600px]  mb-12">
             <div className="absolute inset-0">
               <img
                 src={featured.poster}
