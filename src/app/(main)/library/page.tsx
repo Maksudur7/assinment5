@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -24,6 +24,8 @@ const PAGE_SIZE = 8;
 export default function LibraryPage() {
   const router = useRouter();
   const [items, setItems] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -37,36 +39,43 @@ export default function LibraryPage() {
   const [userRole, setUserRole] = useState<UserRole>("user");
   const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
 
-  async function load() {
-    const [result, me, purchases] = await Promise.all([
-      mediaFetchers.list({
-        page,
-        pageSize: PAGE_SIZE,
-        search,
-        genre: genre === "all" ? undefined : genre,
-        platform: platform === "all" ? undefined : platform,
-        releaseYear: releaseYear === "all" ? undefined : Number(releaseYear),
-        minRating: minRating === "all" ? undefined : Number(minRating),
-        maxRating: maxRating === "all" ? undefined : Number(maxRating),
-        minPopularity: popularity === "all" ? undefined : Number(popularity),
-        sort,
-      }),
-      portalService.getCurrentUser(),
-      portalService.getPurchaseHistory(),
-    ]);
-    const paginated = result as import("@/src/lib/portal/types").Paginated<import("@/src/lib/portal/types").MediaItem>;
-    setItems(paginated.items);
-    setTotal(paginated.total);
-    setUserRole(me?.role ?? "user");
-    setPurchaseHistory(purchases as import("@/src/lib/portal/types").PurchaseRecord[]);
-  }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [result, me, purchases] = await Promise.all([
+        mediaFetchers.list({
+          page,
+          pageSize: PAGE_SIZE,
+          search,
+          genre: genre === "all" ? undefined : genre,
+          platform: platform === "all" ? undefined : platform,
+          releaseYear: releaseYear === "all" ? undefined : Number(releaseYear),
+          minRating: minRating === "all" ? undefined : Number(minRating),
+          maxRating: maxRating === "all" ? undefined : Number(maxRating),
+          minPopularity: popularity === "all" ? undefined : Number(popularity),
+          sort,
+        }),
+        portalService.getCurrentUser(),
+        portalService.getPurchaseHistory(),
+      ]);
+      const paginated = result as import("@/src/lib/portal/types").Paginated<import("@/src/lib/portal/types").MediaItem>;
+      setItems(paginated.items);
+      setTotal(paginated.total);
+      setUserRole(me?.role ?? "user");
+      setPurchaseHistory(purchases as import("@/src/lib/portal/types").PurchaseRecord[]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load media library");
+      setItems([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search, genre, platform, releaseYear, minRating, maxRating, popularity, sort]);
 
   useEffect(() => {
-    async function fetchData() {
-      await load();
-    }
-    fetchData();
-  }, [page, search, genre, platform, releaseYear, minRating, maxRating, popularity, sort]);
+    void load();
+  }, [load]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
@@ -153,35 +162,54 @@ export default function LibraryPage() {
           <Badge className="bg-primary text-primary-foreground">{total} titles</Badge>
           <p className="text-muted-foreground text-sm">Page {page} of {totalPages}</p>
         </div>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          {items.map((item) => (
-            <VideoCard
-              key={item.id}
-              id={item.id}
-              title={item.title}
-              thumbnail={item.poster}
-              duration={item.duration}
-              rating={item.avgRating}
-              year={String(item.releaseYear)}
-              category={item.genres[0]}
-              pricing={item.pricing}
-              isLocked={item.pricing === "premium" ? !canAccessMedia(item, userRole, purchaseHistory) : false}
-              onClick={() => router.push(`/watch/${item.id}`)}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: PAGE_SIZE }, (_, i) => (
+              <div key={i} className="rounded-lg border border-border bg-card p-3 animate-pulse space-y-3">
+                <div className="aspect-2/3 w-full rounded bg-muted" />
+                <div className="h-4 w-3/4 rounded bg-muted" />
+                <div className="h-3 w-full rounded bg-muted" />
+                <div className="h-8 w-full rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+            No titles matched your filters. Try resetting filter values.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {items.map((item) => (
+              <VideoCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                description={item.synopsis}
+                thumbnail={item.poster}
+                duration={item.duration}
+                rating={item.avgRating}
+                year={String(item.releaseYear)}
+                category={item.genres[0]}
+                pricing={item.pricing}
+                isLocked={item.pricing === "premium" ? !canAccessMedia(item, userRole, purchaseHistory) : false}
+                onClick={() => router.push(`/watch/${item.id}`)}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="flex justify-center gap-3 pt-2">
           <button
-            className="px-4 py-2 rounded bg-white/10 text-white disabled:opacity-40"
+            className="px-4 py-2 rounded border border-border bg-card text-foreground disabled:opacity-40"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
             Previous
           </button>
           <button
-            className="px-4 py-2 rounded bg-white/10 text-white disabled:opacity-40"
+            className="px-4 py-2 rounded border border-border bg-card text-foreground disabled:opacity-40"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           >

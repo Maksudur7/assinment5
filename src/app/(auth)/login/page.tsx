@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { authFetchers } from "@/src/lib/fetchers/core";
 
 export default function Page() {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [email, setEmail] = useState(""); 
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
  
@@ -20,10 +19,22 @@ export default function Page() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccess("");
+
+    if (!email.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
     setLoading(true);
     try {
       await authFetchers.login(email, password);
-  
+      setSuccess("Login successful. Redirecting...");
       window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -34,6 +45,7 @@ export default function Page() {
 
   async function handleSocial(provider: "google" | "facebook" | "github") {
     setError("");
+    setSuccess("");
     setLoading(true);
     try {
       await authFetchers.socialLogin(provider);
@@ -43,11 +55,42 @@ export default function Page() {
     }
   }
 
+  function applyDemoCredentials(type: "user" | "admin") {
+    if (type === "admin") {
+      setEmail("admin@ngv.local");
+      setPassword("admin12345");
+      return;
+    }
+    setEmail("user@ngv.local");
+    setPassword("user12345");
+  }
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-6">
       <div className="w-full max-w-md bg-zinc-900 rounded-lg p-8 border border-white/10">
         <h1 className="text-white text-2xl mb-2 font-bold">Welcome Back</h1>
         <p className="text-white/60 mb-6">Login to continue watching</p>
+
+        <div className="grid grid-cols-2 gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => applyDemoCredentials("user")}
+            className="rounded border border-white/20 bg-white/5 py-2 text-sm text-white hover:bg-white/10 transition"
+          >
+            Demo User
+          </button>
+          <button
+            type="button"
+            onClick={() => applyDemoCredentials("admin")}
+            className="rounded border border-white/20 bg-white/5 py-2 text-sm text-white hover:bg-white/10 transition"
+          >
+            Demo Admin
+          </button>
+        </div>
+
+        <p className="text-xs text-white/50 mb-4">
+          Tip: First time হলে আগে Sign Up করে account create করো (password minimum 8 characters).
+        </p>
 
         <form className="space-y-4" onSubmit={handleLogin}>
           <div>
@@ -87,6 +130,12 @@ export default function Page() {
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 p-3 rounded">
               <p className="text-red-400 text-xs">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-500/10 border border-green-500/20 p-3 rounded">
+              <p className="text-green-300 text-xs">{success}</p>
             </div>
           )}
 

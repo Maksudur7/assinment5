@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { authFetchers } from "@/src/lib/fetchers/core";
 
 export default function Page() {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,6 +19,11 @@ export default function Page() {
     
     if (!name.trim() || !email.trim() || !password.trim()) {
       setError("All fields are required");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -52,6 +55,7 @@ export default function Page() {
       <div className="w-full max-w-md bg-zinc-900 rounded-lg p-8 border border-white/10">
         <h1 className="text-white text-2xl mb-2">Create Account</h1>
         <p className="text-white/60 mb-6">Join NGV and start watching today</p>
+        <p className="text-xs text-white/50 mb-4">Use at least 8 characters for password.</p>
 
         <form className="space-y-4" onSubmit={handleSignup}>
           <div>
