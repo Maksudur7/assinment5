@@ -8,6 +8,10 @@ import type {
   Review,
   ReviewComment,
   SocialProvider,
+  LandingContent,
+  LandingHighlight,
+  LandingTestimonial,
+  LandingFaq,
 } from "./types";
 
 export type CreateReviewInput = {
@@ -57,4 +61,12 @@ export interface PortalService {
   removeReview(reviewId: string): Promise<void>;
 
   getAdminOverview(): Promise<AdminOverview>;
+
+  getLandingContent(): Promise<{ success: boolean; data: LandingContent }>;
+  createLandingHighlight(title: string, text: string): Promise<LandingHighlight>;
+  deleteLandingHighlight(id: string): Promise<void>;
+  createLandingTestimonial(name: string, quote: string): Promise<LandingTestimonial>;
+  deleteLandingTestimonial(id: string): Promise<void>;
+  createLandingFaq(question: string, answer: string): Promise<LandingFaq>;
+  deleteLandingFaq(id: string): Promise<void>;
 }

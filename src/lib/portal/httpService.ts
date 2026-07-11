@@ -55,7 +55,17 @@ async function call<T>(
       handleAuthError({ message: `${res.status}` }, onLogout);
       throw new Error(`Unauthorized (${res.status})`);
     }
-    throw new Error(`API Error: ${res.status}`);
+    
+    let errorMsg = `API Error: ${res.status}`;
+    try {
+      const errorBody = await res.json();
+      if (errorBody && errorBody.message) {
+        errorMsg = `API Error: ${res.status} - ${errorBody.message}`;
+      }
+    } catch (e) {
+      // Ignore if body isn't JSON
+    }
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -279,7 +289,8 @@ export const httpPortalService = {
       body: JSON.stringify(input),
     }),
   deleteMedia: (id: string) => call(`/media/${id}`, { method: "DELETE" }),
-  getReviews: (mediaId: string) => call(`/media/${mediaId}/reviews`),
+  getReviews: (mediaId: string, includePending = false) => 
+    call(`/media/${mediaId}/reviews${includePending ? "?includePending=true" : ""}`),
   createReview: (input: Record<string, unknown>) =>
     call(`/media/${input.mediaId}/reviews`, {
       method: "POST",
@@ -335,4 +346,26 @@ export const httpPortalService = {
     call(`/admin/reviews/${reviewId}`, {
       method: "DELETE",
     }),
+  getLandingContent: () => call("/landing"),
+  createLandingHighlight: (title: string, text: string) =>
+    call("/landing/highlights", {
+      method: "POST",
+      body: JSON.stringify({ title, text }),
+    }).then((res: any) => res.data),
+  deleteLandingHighlight: (id: string) =>
+    call(`/landing/highlights/${id}`, { method: "DELETE" }),
+  createLandingTestimonial: (name: string, quote: string) =>
+    call("/landing/testimonials", {
+      method: "POST",
+      body: JSON.stringify({ name, quote }),
+    }).then((res: any) => res.data),
+  deleteLandingTestimonial: (id: string) =>
+    call(`/landing/testimonials/${id}`, { method: "DELETE" }),
+  createLandingFaq: (question: string, answer: string) =>
+    call("/landing/faqs", {
+      method: "POST",
+      body: JSON.stringify({ question, answer }),
+    }).then((res: any) => res.data),
+  deleteLandingFaq: (id: string) =>
+    call(`/landing/faqs/${id}`, { method: "DELETE" }),
 };

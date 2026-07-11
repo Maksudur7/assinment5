@@ -12,9 +12,8 @@ import { Input } from "@/src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
 import { portalService } from "@/src/lib/portal";
-import { canAccessMedia, getActiveSubscription } from "@/src/lib/portal/entitlements";
 import { reviewFetchers } from "@/src/lib/fetchers/core";
-import type { MediaItem, PortalUser, PurchaseRecord, Review, ReviewComment } from "@/src/lib/portal/types";
+import type { MediaItem, PortalUser, Review, ReviewComment } from "@/src/lib/portal/types";
 
 
 // Real-time view/user count API helpers
@@ -50,6 +49,8 @@ async function getViewStats(id: string) {
 
 
 import { Loader } from "lucide-react";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
 
 export function WatchClient({ id }: { id: string }) {
   const [user, setUser] = useState<PortalUser | null>(null);
@@ -65,8 +66,6 @@ export function WatchClient({ id }: { id: string }) {
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [replyTarget, setReplyTarget] = useState<Record<string, string | null>>({});
   const [watchSaved, setWatchSaved] = useState(false);
-  const [myPurchases, setMyPurchases] = useState(0);
-  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
   // Real-time view/user count
   const [viewCount, setViewCount] = useState<number>(0);
   const [userCount, setUserCount] = useState<number>(0);
@@ -74,14 +73,13 @@ export function WatchClient({ id }: { id: string }) {
 
   console.log('media', media)
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+  const loadAll = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const [meRaw, itemRaw, listRaw, purchaseHistoryRaw] = await Promise.all([
+      const [meRaw, itemRaw, listRaw] = await Promise.all([
         portalService.getCurrentUser(),
         portalService.getMediaById(id),
         portalService.getMedia({ page: 1, pageSize: 20 }),
-        portalService.getPurchaseHistory(),
       ]);
 
       // Type guards and assertions
@@ -94,13 +92,9 @@ export function WatchClient({ id }: { id: string }) {
       const list = (listRaw && typeof listRaw === "object" && "items" in listRaw && Array.isArray((listRaw as { items?: unknown }).items)) ? (listRaw as { items: MediaItem[] }) : { items: [] };
       setAllMedia(list.items as MediaItem[]);
 
-      const purchaseHistory = Array.isArray(purchaseHistoryRaw) ? (purchaseHistoryRaw as PurchaseRecord[]) : [];
-      setMyPurchases((purchaseHistory as PurchaseRecord[]).length);
-      setPurchaseHistory(purchaseHistory as PurchaseRecord[]);
-
       if (item && me) {
-        // getReviews now expects only 1 argument (mediaId)
-        const rRaw = await portalService.getReviews(item.id);
+        // getReviews now expects 2 arguments: mediaId and includePending
+        const rRaw = await portalService.getReviews(item.id, true);
         const r = Array.isArray(rRaw) ? (rRaw as Review[]) : [];
         setReviews(r as Review[]);
         const cmts: Record<string, ReviewComment[]> = {};
@@ -119,7 +113,7 @@ export function WatchClient({ id }: { id: string }) {
         setWatchSaved((watchlist as MediaItem[]).some((w: MediaItem) => w && w.id === item.id));
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id]);
 
@@ -179,10 +173,11 @@ export function WatchClient({ id }: { id: string }) {
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         spoiler,
       });
+      toast.success("Review submitted successfully! It is now pending admin approval.");
     }
     setEditingReviewId(null);
     setContent("");
-    await loadAll();
+    await loadAll(true);
   }
 
   async function deleteOwnReview(reviewId: string) {
@@ -194,7 +189,8 @@ export function WatchClient({ id }: { id: string }) {
       setSpoiler(false);
       setRating("8");
     }
-    await loadAll();
+    toast.success("Review deleted successfully.");
+    await loadAll(true);
   }
 
   function beginEditReview(review: Review) {
@@ -207,7 +203,7 @@ export function WatchClient({ id }: { id: string }) {
 
   async function likeReview(reviewId: string) {
     await reviewFetchers.toggleLike(reviewId);
-    await loadAll();
+    await loadAll(true);
   }
 
   async function addComment(reviewId: string) {
@@ -216,7 +212,8 @@ export function WatchClient({ id }: { id: string }) {
     await reviewFetchers.comment(reviewId, text);
     setCommentInput((prev) => ({ ...prev, [reviewId]: "" }));
     setReplyTarget((prev) => ({ ...prev, [reviewId]: null }));
-    await loadAll();
+    toast.success("Comment added!");
+    await loadAll(true);
   }
 
   async function toggleWatchlist() {
@@ -230,20 +227,17 @@ export function WatchClient({ id }: { id: string }) {
     }
   }
 
-  async function purchase(type: "rent" | "buy" | "subscription") {
-    if (!media) return;
-    await portalService.createPurchase(type, media.id, {} as Record<string, unknown>);
-    await loadAll();
-  }
 
   async function approveReview(reviewId: string) {
     await portalService.approveReview(reviewId);
-    await loadAll();
+    toast.success("Review approved.");
+    await loadAll(true);
   }
 
   async function unpublishReview(reviewId: string) {
     await portalService.unpublishReview(reviewId);
-    await loadAll();
+    toast.success("Review unpublished.");
+    await loadAll(true);
   }
 
 
@@ -353,9 +347,15 @@ export function WatchClient({ id }: { id: string }) {
             {reviews.length === 0 ? <p className="text-white/60">No reviews yet.</p> : reviews.map((review) => (
               <div key={review.id} className="rounded-md border border-white/10 bg-black/30 p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-white">{review.userName} <span className="text-white/60">• {review.rating}/10</span></p>
-                    <p className="text-white/70 text-sm">{new Date(review.createdAt).toLocaleString()}</p>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10 border border-white/20">
+                      <AvatarImage src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${review.userName}`} alt={review.userName} />
+                      <AvatarFallback className="bg-zinc-800 text-white">{review.userName.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-white font-medium">{review.userName} <span className="text-white/60 font-normal ml-1">• {review.rating}/10</span></p>
+                      <p className="text-white/50 text-xs mt-0.5">{new Date(review.createdAt).toLocaleString()}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {!review.isPublished && <Badge className="bg-yellow-600">Pending</Badge>}
@@ -412,8 +412,6 @@ export function WatchClient({ id }: { id: string }) {
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">
             <h3 className="text-white mb-2">Your Account</h3>
             <p className="text-white/70 text-sm">Role: {user?.role}</p>
-            <p className="text-white/70 text-sm">Purchases: {myPurchases}</p>
-            <p className="text-white/70 text-sm">Plan: {activeSubscription ? `${activeSubscription.plan ?? "monthly"} premium` : "Free"}</p>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">

@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Textarea } from "@/src/components/ui/textarea";
 import { portalService } from "@/src/lib/portal";
-import type { AdminOverview, MediaItem, PortalUser, Review, ReviewComment } from "@/src/lib/portal/types";
+import { adminLandingFetchers } from "@/src/lib/fetchers/core";
+import type { AdminOverview, MediaItem, PortalUser, Review, ReviewComment, LandingContent, LandingHighlight, LandingTestimonial, LandingFaq } from "@/src/lib/portal/types";
 
 const EMPTY_FORM = {
   title: "",
@@ -41,13 +42,25 @@ export default function AdminPage() {
   const [mediaSearch, setMediaSearch] = useState("");
   const [mediaPage, setMediaPage] = useState(1);
 
+  // Landing CMS state
+  const [highlights, setHighlights] = useState<LandingHighlight[]>([]);
+  const [testimonials, setTestimonials] = useState<LandingTestimonial[]>([]);
+  const [faqs, setFaqs] = useState<LandingFaq[]>([]);
+  const [landingMessage, setLandingMessage] = useState("");
+  
+  // Landing Form states
+  const [highlightForm, setHighlightForm] = useState({ title: "", text: "" });
+  const [testimonialForm, setTestimonialForm] = useState({ name: "", quote: "" });
+  const [faqForm, setFaqForm] = useState({ question: "", answer: "" });
+
   async function load() {
-    const [me, adminOverview, mediaResult, reviews, comments] = await Promise.all([
+    const [me, adminOverview, mediaResult, reviews, comments, landingRes] = await Promise.all([
       portalService.getCurrentUser(),
       portalService.getAdminOverview() as Promise<AdminOverview>,
       portalService.getMedia({ page: 1, pageSize: 100 }) as Promise<{ items: MediaItem[] }>,
       portalService.getPendingReviews() as Promise<Review[]>,
       portalService.getPendingComments() as Promise<ReviewComment[]>,
+      portalService.getLandingContent().catch(() => ({ success: false, data: { highlights: [], testimonials: [], faqs: [] } })),
     ]);
 
     setUser(me);
@@ -55,6 +68,12 @@ export default function AdminPage() {
     setMedia(mediaResult.items);
     setPendingReviews(reviews);
     setPendingComments(comments);
+    
+    if (landingRes?.data) {
+      setHighlights(landingRes.data.highlights || []);
+      setTestimonials(landingRes.data.testimonials || []);
+      setFaqs(landingRes.data.faqs || []);
+    }
   }
 
   useEffect(() => {
@@ -146,9 +165,54 @@ export default function AdminPage() {
     await load();
   }
 
+  // Landing Page CMS Handlers
+  async function handleAddHighlight() {
+    if (!highlightForm.title || !highlightForm.text) return;
+    try {
+      await adminLandingFetchers.createHighlight(highlightForm.title, highlightForm.text);
+      setHighlightForm({ title: "", text: "" });
+      await load();
+      setLandingMessage("Highlight added.");
+    } catch (err) {
+      setLandingMessage(err instanceof Error ? err.message : "Error adding highlight");
+    }
+  }
+  async function handleDeleteHighlight(id: string) {
+    await adminLandingFetchers.deleteHighlight(id);
+    await load();
+  }
 
+  async function handleAddTestimonial() {
+    if (!testimonialForm.name || !testimonialForm.quote) return;
+    try {
+      await adminLandingFetchers.createTestimonial(testimonialForm.name, testimonialForm.quote);
+      setTestimonialForm({ name: "", quote: "" });
+      await load();
+      setLandingMessage("Testimonial added.");
+    } catch (err) {
+      setLandingMessage(err instanceof Error ? err.message : "Error adding testimonial");
+    }
+  }
+  async function handleDeleteTestimonial(id: string) {
+    await adminLandingFetchers.deleteTestimonial(id);
+    await load();
+  }
 
-  const filteredMedia = useMemo(() => {
+  async function handleAddFaq() {
+    if (!faqForm.question || !faqForm.answer) return;
+    try {
+      await adminLandingFetchers.createFaq(faqForm.question, faqForm.answer);
+      setFaqForm({ question: "", answer: "" });
+      await load();
+      setLandingMessage("FAQ added.");
+    } catch (err) {
+      setLandingMessage(err instanceof Error ? err.message : "Error adding FAQ");
+    }
+  }
+  async function handleDeleteFaq(id: string) {
+    await adminLandingFetchers.deleteFaq(id);
+    await load();
+  }  const filteredMedia = useMemo(() => {
     const q = mediaSearch.trim().toLowerCase();
     if (!q) return media;
     return media.filter((m) => m.title.toLowerCase().includes(q) || String(m.releaseYear).includes(q));
@@ -220,10 +284,11 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="media" className="space-y-6">
-          <TabsList className="bg-zinc-900 border border-white/10">
-            <TabsTrigger value="media" className="data-[state=active]:bg-[#E50914]"><Upload className="w-4 h-4 mr-2" />Media Library</TabsTrigger>
-            <TabsTrigger value="moderation" className="data-[state=active]:bg-[#E50914]"><Shield className="w-4 h-4 mr-2" />Moderation</TabsTrigger>
-            <TabsTrigger value="reports" className="data-[state=active]:bg-[#E50914]"><BarChart3 className="w-4 h-4 mr-2" />Reports</TabsTrigger>
+          <TabsList className="bg-zinc-900 border border-white/10 flex-wrap h-auto">
+            <TabsTrigger value="media" className="data-[state=active]:bg-[#E50914] py-2"><Upload className="w-4 h-4 mr-2" />Media Library</TabsTrigger>
+            <TabsTrigger value="moderation" className="data-[state=active]:bg-[#E50914] py-2"><Shield className="w-4 h-4 mr-2" />Moderation</TabsTrigger>
+            <TabsTrigger value="reports" className="data-[state=active]:bg-[#E50914] py-2"><BarChart3 className="w-4 h-4 mr-2" />Reports</TabsTrigger>
+            <TabsTrigger value="landing" className="data-[state=active]:bg-[#E50914] py-2"><Upload className="w-4 h-4 mr-2" />Landing Page</TabsTrigger>
           </TabsList>
 
           <TabsContent value="media" className="grid lg:grid-cols-2 gap-6">
@@ -375,6 +440,85 @@ export default function AdminPage() {
           </TabsContent>
 
 
+          <TabsContent value="landing">
+            <div className="space-y-6">
+              {landingMessage && <p className="text-white/70 bg-black/30 p-2 rounded">{landingMessage}</p>}
+              
+              <div className="grid lg:grid-cols-3 gap-6">
+                {/* Highlights CMS */}
+                <Card className="bg-zinc-900 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="text-white">Highlights</CardTitle>
+                    <CardDescription>Platform features and descriptions</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Input className="bg-zinc-800 border-white/10 text-white" placeholder="Title" value={highlightForm.title} onChange={e => setHighlightForm(p => ({...p, title: e.target.value}))} />
+                      <Textarea className="bg-zinc-800 border-white/10 text-white" placeholder="Description" value={highlightForm.text} onChange={e => setHighlightForm(p => ({...p, text: e.target.value}))} />
+                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" onClick={handleAddHighlight}>Add Highlight</Button>
+                    </div>
+                    <div className="space-y-2 mt-4">
+                      {highlights.map(h => (
+                        <div key={h.id} className="border border-white/10 p-2 rounded bg-black/30 relative">
+                          <p className="text-white text-sm font-medium pr-8">{h.title}</p>
+                          <p className="text-white/60 text-xs mt-1">{h.text}</p>
+                          <button onClick={() => handleDeleteHighlight(h.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Testimonials CMS */}
+                <Card className="bg-zinc-900 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="text-white">Testimonials</CardTitle>
+                    <CardDescription>Viewer reviews and feedback</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Input className="bg-zinc-800 border-white/10 text-white" placeholder="Name & Location" value={testimonialForm.name} onChange={e => setTestimonialForm(p => ({...p, name: e.target.value}))} />
+                      <Textarea className="bg-zinc-800 border-white/10 text-white" placeholder="Quote" value={testimonialForm.quote} onChange={e => setTestimonialForm(p => ({...p, quote: e.target.value}))} />
+                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" onClick={handleAddTestimonial}>Add Testimonial</Button>
+                    </div>
+                    <div className="space-y-2 mt-4">
+                      {testimonials.map(t => (
+                        <div key={t.id} className="border border-white/10 p-2 rounded bg-black/30 relative">
+                          <p className="text-white text-sm font-medium pr-8">{t.name}</p>
+                          <p className="text-white/60 text-xs mt-1">{t.quote}</p>
+                          <button onClick={() => handleDeleteTestimonial(t.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* FAQs CMS */}
+                <Card className="bg-zinc-900 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="text-white">FAQs</CardTitle>
+                    <CardDescription>Common questions and answers</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Input className="bg-zinc-800 border-white/10 text-white" placeholder="Question" value={faqForm.question} onChange={e => setFaqForm(p => ({...p, question: e.target.value}))} />
+                      <Textarea className="bg-zinc-800 border-white/10 text-white" placeholder="Answer" value={faqForm.answer} onChange={e => setFaqForm(p => ({...p, answer: e.target.value}))} />
+                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" onClick={handleAddFaq}>Add FAQ</Button>
+                    </div>
+                    <div className="space-y-2 mt-4">
+                      {faqs.map(f => (
+                        <div key={f.id} className="border border-white/10 p-2 rounded bg-black/30 relative">
+                          <p className="text-white text-sm font-medium pr-8">{f.question}</p>
+                          <p className="text-white/60 text-xs mt-1">{f.answer}</p>
+                          <button onClick={() => handleDeleteFaq(f.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </div>

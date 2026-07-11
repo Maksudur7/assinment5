@@ -211,6 +211,15 @@ export const adminFetchers = {
   removeComment: (commentId: string) => portalService.removeComment(commentId),
 };
 
+export const adminLandingFetchers = {
+  createHighlight: portalService.createLandingHighlight.bind(portalService),
+  deleteHighlight: portalService.deleteLandingHighlight.bind(portalService),
+  createTestimonial: portalService.createLandingTestimonial.bind(portalService),
+  deleteTestimonial: portalService.deleteLandingTestimonial.bind(portalService),
+  createFaq: portalService.createLandingFaq.bind(portalService),
+  deleteFaq: portalService.deleteLandingFaq.bind(portalService),
+};
+
 export const homeFetchers = {
   getTrending: () =>
     portalService
@@ -229,6 +238,9 @@ export const homeFetchers = {
 
   getRecommendations: () =>
     portalService.getMedia({ pageSize: 12 }).then((r: any) => r.items || []),
+
+  getLandingContent: () =>
+    portalService.getLandingContent().then((r: any) => r.data),
 };
 
 export const dashboardFetchers = {

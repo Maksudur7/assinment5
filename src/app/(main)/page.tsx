@@ -20,15 +20,20 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [highlights, setHighlights] = useState<any[]>([]);
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
+
   // Refactored: Data loading logic in a separate function
   async function loadHomePageData() {
     try {
       setLoading(true);
       setError("");
-      const [featuredData, trendingData, newReleasesData] = await Promise.all([
+      const [featuredData, trendingData, newReleasesData, landingContent] = await Promise.all([
         homeFetchers.getFeatured(),
         homeFetchers.getTrending(),
         homeFetchers.getNewReleases(),
+        homeFetchers.getLandingContent(),
       ]);
 
       if (featuredData && featuredData.length > 0) {
@@ -36,6 +41,12 @@ export default function Page() {
       }
       setTrending(trendingData.slice(0, 6));
       setNewReleases(newReleasesData.slice(0, 6));
+      
+      if (landingContent) {
+        setHighlights(landingContent.highlights || []);
+        setTestimonials(landingContent.testimonials || []);
+        setFaqs(landingContent.faqs || []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load content");
     } finally {
@@ -72,24 +83,6 @@ export default function Page() {
       .slice(0, 6)
       .map(([name, count]) => ({ name, count }));
   }, [trending, newReleases]);
-
-  const featureBlocks = [
-    { title: "Adaptive Discovery", text: "Trending and recommendation blocks auto-refresh from user interactions and ratings." },
-    { title: "Secure Streaming", text: "Role access, entitlement checks, and protected playback routing keep content control strict." },
-    { title: "Cross-device UX", text: "Optimized browsing and watch workflows for mobile, tablet and desktop screens." },
-  ];
-
-  const testimonials = [
-    { name: "Rafi, Dhaka", quote: "Library filter ta onek smooth. Ami genre + rating diye instant bhalo recommendation pai." },
-    { name: "Nabila, Chattogram", quote: "Dark mode + watchlist flow khub clean. Mobile e use korte khub comfortable." },
-    { name: "Shuvo, Rajshahi", quote: "Review moderation system clear, tai platform er quality maintain thake." },
-  ];
-
-  const faqPreview = [
-    { q: "How do recommendations work?", a: "We prioritize high ratings, review activity, and recent engagement trends." },
-    { q: "Can I watch premium instantly?", a: "Yes, with subscription, rent, or buy access based on entitlement checks." },
-    { q: "Is my profile editable?", a: "Yes, profile details can be updated from the dashboard profile section." },
-  ];
 
   if (error) {
     return (
@@ -336,14 +329,18 @@ export default function Page() {
             {/* Highlights */}
             <div className="mb-12">
               <h2 className="text-foreground text-2xl mb-6">Platform Highlights</h2>
-              <div className="grid md:grid-cols-3 gap-4">
-                {featureBlocks.map((feature) => (
-                  <div key={feature.title} className="rounded-xl border border-border bg-card p-5">
-                    <h3 className="text-foreground text-lg mb-2">{feature.title}</h3>
-                    <p className="text-muted-foreground text-sm">{feature.text}</p>
-                  </div>
-                ))}
-              </div>
+              {highlights.length === 0 ? (
+                <p className="text-muted-foreground">No highlights available yet.</p>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-4">
+                  {highlights.map((feature) => (
+                    <div key={feature.id} className="rounded-xl border border-border bg-card p-5">
+                      <h3 className="text-foreground text-lg mb-2">{feature.title}</h3>
+                      <p className="text-muted-foreground text-sm">{feature.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Top Categories */}
@@ -373,28 +370,36 @@ export default function Page() {
             {/* Testimonials */}
             <div className="mb-12">
               <h2 className="text-foreground text-2xl mb-6">What Viewers Say</h2>
-              <div className="grid md:grid-cols-3 gap-4">
-                {testimonials.map((item) => (
-                  <div key={item.name} className="rounded-xl border border-border bg-card p-5">
-                    <Users className="w-5 h-5 text-[#E50914] mb-3" />
-                    <p className="text-foreground text-sm mb-3">“{item.quote}”</p>
-                    <p className="text-muted-foreground text-xs">{item.name}</p>
-                  </div>
-                ))}
-              </div>
+              {testimonials.length === 0 ? (
+                <p className="text-muted-foreground">No testimonials available yet.</p>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-4">
+                  {testimonials.map((item) => (
+                    <div key={item.id} className="rounded-xl border border-border bg-card p-5">
+                      <Users className="w-5 h-5 text-[#E50914] mb-3" />
+                      <p className="text-foreground text-sm mb-3">“{item.quote}”</p>
+                      <p className="text-muted-foreground text-xs">{item.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* FAQ Preview */}
             <div className="mb-12 rounded-xl border border-border bg-card p-6">
               <h2 className="text-foreground text-2xl mb-4">Quick Answers</h2>
-              <div className="space-y-3">
-                {faqPreview.map((item) => (
-                  <div key={item.q} className="rounded-lg border border-border bg-background p-4">
-                    <p className="text-foreground font-medium flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#E50914]" />{item.q}</p>
-                    <p className="text-muted-foreground text-sm mt-1">{item.a}</p>
-                  </div>
-                ))}
-              </div>
+              {faqs.length === 0 ? (
+                <p className="text-muted-foreground">No FAQs available yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {faqs.map((item) => (
+                    <div key={item.id} className="rounded-lg border border-border bg-background p-4">
+                      <p className="text-foreground font-medium flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#E50914]" />{item.question}</p>
+                      <p className="text-muted-foreground text-sm mt-1">{item.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Newsletter CTA */}
