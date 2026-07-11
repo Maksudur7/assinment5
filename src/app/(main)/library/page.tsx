@@ -192,8 +192,7 @@ export default function LibraryPage() {
                 rating={item.avgRating}
                 year={String(item.releaseYear)}
                 category={item.genres[0]}
-                pricing={item.pricing}
-                isLocked={item.pricing === "premium" ? !canAccessMedia(item, userRole, purchaseHistory) : false}
+
                 onClick={() => router.push(`/watch/${item.id}`)}
               />
             ))}

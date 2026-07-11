@@ -12,8 +12,7 @@ interface VideoCardProps {
   rating?: number;
   year?: string;
   category?: string;
-  pricing?: "free" | "premium";
-  isLocked?: boolean;
+
   isNew?: boolean;
   onClick?: () => void;
 }
@@ -27,8 +26,7 @@ export function VideoCard({
   rating,
   year,
   category,
-  pricing,
-  isLocked,
+
   isNew,
   onClick,
 }: VideoCardProps) {
@@ -62,21 +60,7 @@ export function VideoCard({
           )}
         </div>
 
-        {(pricing || typeof isLocked === "boolean") ? (
-          <div className="absolute top-2 right-2 flex gap-2">
-            {pricing ? (
-              <Badge className={pricing === "premium" ? "bg-amber-500 text-black border-0" : "bg-emerald-600 text-white border-0"}>
-                {pricing === "premium" ? "PREMIUM" : "FREE"}
-              </Badge>
-            ) : null}
-            {typeof isLocked === "boolean" ? (
-              <Badge variant="outline" className="bg-background/60 border-border text-foreground backdrop-blur-sm">
-                {isLocked ? <Lock className="w-3 h-3 mr-1" /> : <Unlock className="w-3 h-3 mr-1" />}
-                {isLocked ? "Locked" : "Open"}
-              </Badge>
-            ) : null}
-          </div>
-        ) : null}
+
 
         {duration && (
           <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded text-foreground text-xs flex items-center gap-1">

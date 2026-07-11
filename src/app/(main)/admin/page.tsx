@@ -22,14 +22,12 @@ const EMPTY_FORM = {
   director: "",
   cast: "",
   platforms: "NGV",
-  pricing: "premium" as "free" | "premium",
   streamingUrl: "",
   poster: "",
   duration: "2h 00m",
 };
 
 const MEDIA_PAGE_SIZE = 8;
-const SALES_PAGE_SIZE = 8;
 
 export default function AdminPage() {
   const [user, setUser] = useState<PortalUser | null>(null);
@@ -37,23 +35,19 @@ export default function AdminPage() {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [pendingReviews, setPendingReviews] = useState<Review[]>([]);
   const [pendingComments, setPendingComments] = useState<ReviewComment[]>([]);
-  const [purchases, setPurchases] = useState<Array<{ id: string; type: string; amount: number; status: string; createdAt: string }>>([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [mediaSearch, setMediaSearch] = useState("");
   const [mediaPage, setMediaPage] = useState(1);
-  const [salesStatusFilter, setSalesStatusFilter] = useState<"all" | "active" | "expired" | "revoked" | "refunded">("all");
-  const [salesPage, setSalesPage] = useState(1);
 
   async function load() {
-    const [me, adminOverview, mediaResult, reviews, comments, purchaseHistory] = await Promise.all([
+    const [me, adminOverview, mediaResult, reviews, comments] = await Promise.all([
       portalService.getCurrentUser(),
       portalService.getAdminOverview() as Promise<AdminOverview>,
       portalService.getMedia({ page: 1, pageSize: 100 }) as Promise<{ items: MediaItem[] }>,
       portalService.getPendingReviews() as Promise<Review[]>,
       portalService.getPendingComments() as Promise<ReviewComment[]>,
-      portalService.getAllPurchases() as Promise<Array<{ id: string; type: string; amount: number; status: string; createdAt: string }>>,
     ]);
 
     setUser(me);
@@ -61,15 +55,6 @@ export default function AdminPage() {
     setMedia(mediaResult.items);
     setPendingReviews(reviews);
     setPendingComments(comments);
-    setPurchases(
-      purchaseHistory.map((p) => ({
-        id: p.id,
-        type: p.type,
-        amount: p.amount,
-        status: p.status,
-        createdAt: p.createdAt,
-      })),
-    );
   }
 
   useEffect(() => {
@@ -89,7 +74,6 @@ export default function AdminPage() {
       director: form.director.trim(),
       cast: form.cast.split(",").map((x) => x.trim()).filter(Boolean),
       platforms: form.platforms.split(",").map((x) => x.trim()).filter(Boolean),
-      pricing: form.pricing,
       streamingUrl: form.streamingUrl.trim(),
       poster: form.poster.trim(),
       duration: form.duration.trim(),
@@ -121,7 +105,6 @@ export default function AdminPage() {
       director: item.director,
       cast: item.cast.join(","),
       platforms: item.platforms.join(","),
-      pricing: item.pricing,
       streamingUrl: item.streamingUrl,
       poster: item.poster,
       duration: item.duration,
@@ -163,10 +146,7 @@ export default function AdminPage() {
     await load();
   }
 
-  async function revokePurchase(id: string) {
-    await portalService.revokePurchase(id);
-    await load();
-  }
+
 
   const filteredMedia = useMemo(() => {
     const q = mediaSearch.trim().toLowerCase();
@@ -181,17 +161,7 @@ export default function AdminPage() {
     return filteredMedia.slice(start, start + MEDIA_PAGE_SIZE);
   }, [filteredMedia, mediaPage]);
 
-  const filteredSales = useMemo(() => {
-    if (salesStatusFilter === "all") return purchases;
-    return purchases.filter((p) => p.status === salesStatusFilter);
-  }, [purchases, salesStatusFilter]);
 
-  const salesTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredSales.length / SALES_PAGE_SIZE)), [filteredSales.length]);
-
-  const paginatedSales = useMemo(() => {
-    const start = (salesPage - 1) * SALES_PAGE_SIZE;
-    return filteredSales.slice(start, start + SALES_PAGE_SIZE);
-  }, [filteredSales, salesPage]);
 
   if (!user) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Loading admin console...</div>;
@@ -217,54 +187,43 @@ export default function AdminPage() {
           <p className="text-white/60">Role-based media library management, moderation, reporting and revenue controls.</p>
         </div>
 
-            <div className="grid md:grid-cols-4 gap-4">
-              <Card className="bg-zinc-900 border-white/10">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white text-base flex items-center gap-2">
-                    <Clapperboard className="w-4 h-4 text-[#E50914]" />
-                    Total Media
-                  </CardTitle>
-                </CardHeader>
-                <CardContent><p className="text-3xl text-foreground">{overview?.totalMedia ?? 0}</p></CardContent>
-              </Card>
+        <div className="grid md:grid-cols-4 gap-4">
+          <Card className="bg-zinc-900 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                <Clapperboard className="w-4 h-4 text-[#E50914]" />
+                Total Media
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-3xl text-foreground">{overview?.totalMedia ?? 0}</p></CardContent>
+          </Card>
 
-              <Card className="bg-zinc-900 border-white/10">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white text-base flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-[#E50914]" />
-                    Pending Reviews
-                  </CardTitle>
-                </CardHeader>
-                <CardContent><p className="text-3xl text-foreground">{overview?.pendingReviews ?? 0}</p></CardContent>
-              </Card>
+          <Card className="bg-zinc-900 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[#E50914]" />
+                Pending Reviews
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-3xl text-foreground">{overview?.pendingReviews ?? 0}</p></CardContent>
+          </Card>
 
-              <Card className="bg-zinc-900 border-white/10">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white text-base flex items-center gap-2">
-                    <EyeOff className="w-4 h-4 text-[#E50914]" />
-                    Hidden Comments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent><p className="text-3xl text-foreground">{overview?.hiddenComments ?? 0}</p></CardContent>
-              </Card>
-
-              <Card className="bg-zinc-900 border-white/10">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white text-base flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-[#E50914]" />
-                    Revenue
-                  </CardTitle>
-                </CardHeader>
-                <CardContent><p className="text-3xl text-foreground">${(overview?.totalRevenue ?? 0).toFixed(2)}</p></CardContent>
-              </Card>
-            </div>
+          <Card className="bg-zinc-900 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                <EyeOff className="w-4 h-4 text-[#E50914]" />
+                Hidden Comments
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-3xl text-foreground">{overview?.hiddenComments ?? 0}</p></CardContent>
+          </Card>
+        </div>
 
         <Tabs defaultValue="media" className="space-y-6">
           <TabsList className="bg-zinc-900 border border-white/10">
             <TabsTrigger value="media" className="data-[state=active]:bg-[#E50914]"><Upload className="w-4 h-4 mr-2" />Media Library</TabsTrigger>
             <TabsTrigger value="moderation" className="data-[state=active]:bg-[#E50914]"><Shield className="w-4 h-4 mr-2" />Moderation</TabsTrigger>
             <TabsTrigger value="reports" className="data-[state=active]:bg-[#E50914]"><BarChart3 className="w-4 h-4 mr-2" />Reports</TabsTrigger>
-            <TabsTrigger value="sales" className="data-[state=active]:bg-[#E50914]"><DollarSign className="w-4 h-4 mr-2" />Sales</TabsTrigger>
           </TabsList>
 
           <TabsContent value="media" className="grid lg:grid-cols-2 gap-6">
@@ -415,82 +374,7 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="sales">
-            <Card className="bg-zinc-900 border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white">Sales / Rental Analytics</CardTitle>
-                <CardDescription>Optional refunds & access revocation controls included</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-3 gap-3 mb-4">
-                  <div className="rounded-md bg-black/30 border border-white/10 p-3"><p className="text-white/60 text-sm">Total Sales</p><p className="text-white text-2xl">{overview?.totalSales ?? 0}</p></div>
-                  <div className="rounded-md bg-black/30 border border-white/10 p-3"><p className="text-white/60 text-sm">Total Rentals</p><p className="text-white text-2xl">{overview?.totalRentals ?? 0}</p></div>
-                  <div className="rounded-md bg-black/30 border border-white/10 p-3"><p className="text-white/60 text-sm">Active Purchases</p><p className="text-white text-2xl">{overview?.activePurchases ?? 0}</p></div>
-                </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <select
-                    value={salesStatusFilter}
-                    onChange={(e) => {
-                      setSalesStatusFilter(e.target.value as typeof salesStatusFilter);
-                      setSalesPage(1);
-                    }}
-                    className="rounded-md bg-zinc-800 border border-white/10 text-white px-3 py-2 text-sm"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="expired">Expired</option>
-                    <option value="revoked">Revoked</option>
-                    <option value="refunded">Refunded</option>
-                  </select>
-                  <p className="text-white/60 text-sm">Page {salesPage} of {salesTotalPages}</p>
-                </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/10"><TableHead className="text-white">Type</TableHead><TableHead className="text-white">Amount</TableHead><TableHead className="text-white">Status</TableHead><TableHead className="text-white">Date</TableHead><TableHead className="text-white">Actions</TableHead></TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedSales.map((p) => (
-                      <TableRow key={p.id} className="border-white/10">
-                        <TableCell className="text-white uppercase">{p.type}</TableCell>
-                        <TableCell className="text-white">${p.amount.toFixed(2)}</TableCell>
-                        <TableCell className="text-white/70">{p.status}</TableCell>
-                        <TableCell className="text-white/70">{new Date(p.createdAt).toLocaleString()}</TableCell>
-                        <TableCell>
-                          {p.status === "active" ? (
-                            <Button size="sm" variant="outline" className="bg-yellow-900/20 border-yellow-700 text-yellow-300" onClick={() => void revokePurchase(p.id)}>Revoke/Refund</Button>
-                          ) : (
-                            <Badge variant="outline" className="border-white/20 text-white/70">Closed</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-white/5 border-white/10 text-white"
-                    disabled={salesPage <= 1}
-                    onClick={() => setSalesPage((p) => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-white/5 border-white/10 text-white"
-                    disabled={salesPage >= salesTotalPages}
-                    onClick={() => setSalesPage((p) => Math.min(salesTotalPages, p + 1))}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </div>

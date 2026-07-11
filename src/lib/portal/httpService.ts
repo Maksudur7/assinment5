@@ -306,17 +306,7 @@ export const httpPortalService = {
   toggleWatchlist: (mediaId: string) =>
     call(`/watchlist/${mediaId}`, { method: "POST" }),
   getWatchlist: () => call("/watchlist"),
-  createPurchase: (
-    type: string,
-    mediaId: string,
-    payment: Record<string, unknown>,
-  ) =>
-    call("/purchases", {
-      method: "POST",
-      body: JSON.stringify({ type, mediaId, payment }),
-    }),
-  getPurchaseHistory: () => call("/purchases/history"),
-  getAllPurchases: () => call("/purchases"),
+
   getPendingReviews: () => call("/admin/reviews/pending"),
   approveReview: (reviewId: string) =>
     call(`/admin/reviews/${reviewId}/approve`, {
@@ -336,10 +326,7 @@ export const httpPortalService = {
     call(`/admin/comments/${commentId}`, {
       method: "DELETE",
     }),
-  revokePurchase: (purchaseId: string) =>
-    call(`/purchases/${purchaseId}/revoke`, {
-      method: "POST",
-    }),
+
   unpublishReview: (reviewId: string) =>
     call(`/admin/reviews/${reviewId}/unpublish`, {
       method: "POST",

@@ -3,7 +3,6 @@ import { portalService } from "../portal";
 import { setAuthToken, setStoredUser } from "../portal/storage";
 import {
   MediaQuery,
-  PurchaseType,
   SocialProvider,
   UserRole,
 } from "../portal/types";
@@ -190,13 +189,7 @@ export const reviewFetchers = {
   comments: (reviewId: string) => portalService.getComments(reviewId),
 };
 
-export const paymentFetchers = {
-  create: (type: PurchaseType, mediaId?: string, payment?: any) =>
-    portalService.createPurchase(type, mediaId || "", payment ?? undefined),
-  history: () => portalService.getPurchaseHistory(),
-  all: () => portalService.getAllPurchases(),
-  revoke: (purchaseId: string) => portalService.revokePurchase(purchaseId),
-};
+
 
 export const watchlistFetchers = {
   list: () => portalService.getWatchlist(),

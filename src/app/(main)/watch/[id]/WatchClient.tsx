@@ -160,12 +160,7 @@ export function WatchClient({ id }: { id: string }) {
     [allMedia, id],
   );
 
-  const canStreamCurrent = useMemo(() => {
-    if (!media || !user) return false;
-    return canAccessMedia(media, user.role, purchaseHistory);
-  }, [media, user, purchaseHistory]);
 
-  const activeSubscription = useMemo(() => getActiveSubscription(purchaseHistory), [purchaseHistory]);
 
   async function submitReview() {
     if (!media || !content.trim()) return;
@@ -283,7 +278,7 @@ export function WatchClient({ id }: { id: string }) {
               <span className="text-white/80 text-sm">👁️ {viewCount} views</span>
               <span className="text-white/80 text-sm">🟢 {userCount} watching now</span>
             </div>
-            {canStreamCurrent && youTubeEmbedUrl ? (
+            {youTubeEmbedUrl ? (
               <div className="w-full aspect-video bg-black flex items-center justify-center">
                 <iframe
                   width="100%"
@@ -306,43 +301,17 @@ export function WatchClient({ id }: { id: string }) {
               <p className="text-white/80 mb-4">{media.synopsis}</p>
 
               <div className="flex flex-wrap gap-2 mb-4">
-                <Badge className="bg-[#E50914]">{media.pricing.toUpperCase()}</Badge>
                 {media.platforms.map((p) => <Badge key={p} variant="outline" className="border-white/20 text-white">{p}</Badge>)}
-                {media.pricing === "premium" ? (
-                  <Badge className={canStreamCurrent ? "bg-green-600" : "bg-yellow-600"}>
-                    {canStreamCurrent ? "UNLOCKED" : "PREMIUM LOCKED"}
-                  </Badge>
-                ) : null}
               </div>
 
-              {media.pricing === "premium" && !canStreamCurrent ? (
-                <div className="mb-4 rounded-md border border-yellow-600/40 bg-yellow-900/10 p-3 text-sm text-yellow-200">
-                  This is a premium title. Subscribe, rent, or buy to start watching instantly.
-                </div>
-              ) : null}
-
               <div className="flex flex-wrap gap-3">
-                {canStreamCurrent && !youTubeEmbedUrl ? (
+                {!youTubeEmbedUrl ? (
                   <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
                     <a href={media.streamingUrl} target="_blank" rel="noreferrer">Stream Now</a>
                   </Button>
                 ) : null}
-                {!canStreamCurrent ? (
-                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
-                    <Link href="/subscription">Unlock Premium</Link>
-                  </Button>
-                ) : null}
                 <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={toggleWatchlist}>
                   {watchSaved ? "Remove from Watchlist" : "Add to Watchlist"}
-                </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("rent")}> 
-                  Rent
-                </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("buy")}> 
-                  Buy
-                </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("subscription")}> 
-                  Monthly Subscription
                 </Button>
               </div>
             </div>

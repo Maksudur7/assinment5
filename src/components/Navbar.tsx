@@ -94,8 +94,6 @@ export function Navbar() {
     { name: "All Titles", href: "/library", icon: Film },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     ...(isAdmin ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
-    { name: "Plans", href: "/subscription", icon: BadgeDollarSign },
-    { name: "Checkout", href: "/card", icon: CreditCard },
   ];
 
   return (
@@ -189,9 +187,7 @@ export function Navbar() {
                 <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/profile">Profile</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link href="/purchases">Purchases</Link>
-                </DropdownMenuItem>
+
                 <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/watchlist">Watchlist</Link>
                 </DropdownMenuItem>
