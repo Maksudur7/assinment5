@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, ShieldAlert, ShoppingCart, ThumbsUp } from "lucide-react";
+import { MessageCircle, ShieldAlert, ShoppingCart, ThumbsUp, Eye, Users } from "lucide-react";
+import { useRef } from "react";
 
 import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { VideoCard } from "@/src/components/VideoCard";
@@ -117,15 +118,22 @@ export function WatchClient({ id }: { id: string }) {
     }
   }, [id]);
 
+  const hasIncremented = useRef(false);
+
   useEffect(() => {
     let mounted = true;
-    // On mount: increment view count and start polling
-    incrementView(id).then((stats) => {
-      if (stats && mounted) {
-        setViewCount(stats.viewCount);
-        setUserCount(stats.currentViewers);
-      }
-    });
+    
+    // On mount: increment view count only once (protect against React Strict Mode double-mount)
+    if (!hasIncremented.current) {
+      hasIncremented.current = true;
+      incrementView(id).then((stats) => {
+        if (stats && mounted) {
+          setViewCount(stats.viewCount);
+          setUserCount(stats.currentViewers);
+        }
+      });
+    }
+
     // Poll for real-time stats
     const poll = async () => {
       const stats = await getViewStats(id);
@@ -135,10 +143,21 @@ export function WatchClient({ id }: { id: string }) {
       }
     };
     const interval = setInterval(poll, 5000);
+
+    // Reliable decrement on tab close
+    const handleUnload = () => {
+      navigator.sendBeacon(`${API_URL}/media/${id}/decrement-viewer`);
+    };
+    window.addEventListener("beforeunload", handleUnload);
+
     // On unmount: decrement viewer count
     return () => {
       mounted = false;
       clearInterval(interval);
+      window.removeEventListener("beforeunload", handleUnload);
+      
+      // If we are unmounting completely (e.g. navigating away), decrement.
+      // Note: React 18 strict mode may still call this, but the beforeunload is the real fix for stuck viewers.
       decrementViewer(id);
     };
   }, [id]);
@@ -273,9 +292,9 @@ export function WatchClient({ id }: { id: string }) {
         <div className="space-y-6">
           <div className="rounded-lg overflow-hidden  border border-white/10 bg-zinc-900">
             {/* Real-time stats */}
-            <div className="flex items-center gap-6 px-5 pt-4 pb-2">
-              <span className="text-white/80 text-sm">👁️ {viewCount} views</span>
-              <span className="text-white/80 text-sm">🟢 {userCount} watching now</span>
+            <div className="flex items-center gap-6 px-5 pt-4 pb-2 border-b border-white/5">
+              <span className="text-white/80 text-sm flex items-center gap-2"><Eye className="w-4 h-4" /> {viewCount} views</span>
+              <span className="text-white/80 text-sm flex items-center gap-2 text-green-400"><Users className="w-4 h-4" /> {userCount} watching now</span>
             </div>
             {youTubeEmbedUrl ? (
               <div className="w-full aspect-video bg-black flex items-center justify-center">
