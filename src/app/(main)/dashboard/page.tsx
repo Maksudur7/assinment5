@@ -59,9 +59,9 @@ export default function DashboardPage() {
       const me = await portalService.getCurrentUser();
       const [watchlist, purchaseHistory, overview] = await Promise.all([
         portalService.getWatchlist(),
-        me.role === "admin" ? portalService.getAllPurchases() : portalService.getPurchaseHistory(),
-        me.role === "admin" ? portalService.getAdminOverview() : Promise.resolve(null),
-      ]);
+        me?.role === "admin" ? portalService.getAllPurchases() : portalService.getPurchaseHistory(),
+        me?.role === "admin" ? portalService.getAdminOverview() : Promise.resolve(null),
+      ]) as [any[], any[], any];
       setUser(me);
       setWatchlistCount(watchlist.length);
       setPurchaseCount(purchaseHistory.length);
