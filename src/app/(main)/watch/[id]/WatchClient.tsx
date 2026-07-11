@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { MessageCircle, ShieldAlert, ShoppingCart, ThumbsUp, Eye, Users } from "lucide-react";
+import { MessageCircle, ShieldAlert, ShoppingCart, ThumbsUp, Eye, Users, PlayCircle } from "lucide-react";
 import { useRef } from "react";
 
 import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
@@ -12,6 +12,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { portalService } from "@/src/lib/portal";
 import { reviewFetchers } from "@/src/lib/fetchers/core";
 import type { MediaItem, PortalUser, Review, ReviewComment } from "@/src/lib/portal/types";
@@ -132,6 +133,8 @@ export function WatchClient({ id }: { id: string }) {
           setUserCount(stats.currentViewers);
         }
       });
+      // Add to watch history
+      portalService.addToHistory(id).catch(console.error);
     }
 
     // Poll for real-time stats
@@ -264,6 +267,10 @@ export function WatchClient({ id }: { id: string }) {
     await loadAll(true);
   }
 
+
+  const popular = useMemo(() => {
+    return [...allMedia].sort((a, b) => b.avgRating - a.avgRating).filter(m => m.id !== id).slice(0, 6);
+  }, [allMedia, id]);
 
   if (loading) {
     return (
@@ -433,28 +440,88 @@ export function WatchClient({ id }: { id: string }) {
         </div>
 
         <aside className="space-y-6">
-          <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">
-            <h3 className="text-white mb-2">Your Account</h3>
-            <p className="text-white/70 text-sm">Role: {user?.role}</p>
+          {/* Advertisement Placeholder */}
+          <div className="rounded-lg border border-white/10 bg-zinc-900 overflow-hidden relative group">
+            <div className="absolute top-2 right-2 bg-black/60 text-white/50 text-[10px] uppercase px-1.5 py-0.5 rounded backdrop-blur-sm z-10 cursor-pointer hover:text-white transition-colors">
+              Ad
+            </div>
+            <div className="w-full h-96 bg-gradient-to-br from-zinc-800 to-zinc-900 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/5 rounded-lg relative overflow-hidden">
+              {/* Optional background image effect */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(229,9,20,0.1)_0%,_transparent_100%)] opacity-50" />
+              <div className="relative z-10 space-y-2">
+                <div className="w-12 h-12 rounded-full bg-zinc-800 mx-auto flex items-center justify-center border border-white/10">
+                  <PlayCircle className="w-6 h-6 text-[#E50914]" />
+                </div>
+                <h3 className="text-white font-medium text-lg">Premium Access</h3>
+                <p className="text-white/50 text-sm">Unlock exclusive 4K content and ad-free viewing.</p>
+                <Button className="mt-2 bg-[#E50914] hover:bg-[#B2070F] text-white h-8 text-xs">
+                  Upgrade Now
+                </Button>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">
-            <h3 className="text-white mb-3">Related Titles</h3>
-            <div className="grid gap-3">
-              {related.map((item) => (
-                <Link key={item.id} href={`/watch/${item.id}`}>
-                  <VideoCard
-                    id={item.id}
-                    title={item.title}
-                    thumbnail={item.poster}
-                    duration={item.duration}
-                    rating={item.avgRating}
-                    year={String(item.releaseYear)}
-                    category={item.genres[0]}
-                  />
-                </Link>
-              ))}
-            </div>
+            <Tabs defaultValue="related" className="w-full">
+              <TabsList className="w-full bg-black/50 border border-white/5 p-1 mb-4 h-auto rounded-lg">
+                <TabsTrigger value="related" className="flex-1 rounded-md text-sm py-1.5 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-white/60">Up Next</TabsTrigger>
+                <TabsTrigger value="popular" className="flex-1 rounded-md text-sm py-1.5 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-white/60">Popular</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="related" className="mt-0 outline-none">
+                <div className="grid gap-3">
+                  {related.length === 0 ? (
+                    <p className="text-white/50 text-sm text-center py-4">No related titles found.</p>
+                  ) : (
+                    related.map((item) => (
+                      <Link key={item.id} href={`/watch/${item.id}`} className="flex gap-3 group rounded-md p-2 -mx-2 hover:bg-white/5 transition-colors">
+                        <div className="w-28 h-16 rounded overflow-hidden shrink-0 relative bg-black">
+                          <ImageWithFallback src={item.poster} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <div className="absolute bottom-1 right-1 bg-black/80 px-1 text-[10px] text-white rounded">
+                            {item.duration}
+                          </div>
+                        </div>
+                        <div className="flex flex-col py-0.5 justify-between flex-1 min-w-0">
+                          <h4 className="text-white text-sm font-medium leading-tight line-clamp-2 group-hover:text-[#E50914] transition-colors">{item.title}</h4>
+                          <div className="flex items-center text-xs text-white/50 gap-2">
+                            <span>{item.releaseYear}</span>
+                            <span>•</span>
+                            <span className="flex items-center"><ThumbsUp className="w-3 h-3 mr-1" /> {item.avgRating}/10</span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="popular" className="mt-0 outline-none">
+                <div className="grid gap-3">
+                  {popular.length === 0 ? (
+                    <p className="text-white/50 text-sm text-center py-4">No popular titles found.</p>
+                  ) : (
+                    popular.map((item) => (
+                      <Link key={item.id} href={`/watch/${item.id}`} className="flex gap-3 group rounded-md p-2 -mx-2 hover:bg-white/5 transition-colors">
+                        <div className="w-28 h-16 rounded overflow-hidden shrink-0 relative bg-black">
+                          <ImageWithFallback src={item.poster} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <div className="absolute bottom-1 right-1 bg-black/80 px-1 text-[10px] text-white rounded">
+                            {item.duration}
+                          </div>
+                        </div>
+                        <div className="flex flex-col py-0.5 justify-between flex-1 min-w-0">
+                          <h4 className="text-white text-sm font-medium leading-tight line-clamp-2 group-hover:text-[#E50914] transition-colors">{item.title}</h4>
+                          <div className="flex items-center text-xs text-white/50 gap-2">
+                            <span className="truncate">{item.genres?.[0] || "Featured"}</span>
+                            <span>•</span>
+                            <span className="flex items-center"><ThumbsUp className="w-3 h-3 mr-1 text-[#E50914]" /> {item.avgRating}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">

@@ -16,8 +16,7 @@ import {
 } from "@/src/components/ui/select";
 import { mediaFetchers } from "@/src/lib/fetchers/core";
 import { portalService } from "@/src/lib/portal";
-import { canAccessMedia } from "@/src/lib/portal/entitlements";
-import type { MediaItem, PurchaseRecord, UserRole } from "@/src/lib/portal/types";
+import type { MediaItem, UserRole } from "@/src/lib/portal/types";
 
 const PAGE_SIZE = 8;
 
@@ -37,13 +36,12 @@ export default function LibraryPage() {
   const [popularity, setPopularity] = useState("all");
   const [sort, setSort] = useState<"latest" | "highest-rated" | "most-reviewed">("latest");
   const [userRole, setUserRole] = useState<UserRole>("user");
-  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [result, me, purchases] = await Promise.all([
+      const [result, me] = await Promise.all([
         mediaFetchers.list({
           page,
           pageSize: PAGE_SIZE,
@@ -57,13 +55,11 @@ export default function LibraryPage() {
           sort,
         }),
         portalService.getCurrentUser(),
-        portalService.getPurchaseHistory(),
       ]);
       const paginated = result as import("@/src/lib/portal/types").Paginated<import("@/src/lib/portal/types").MediaItem>;
       setItems(paginated.items);
       setTotal(paginated.total);
       setUserRole(me?.role ?? "user");
-      setPurchaseHistory(purchases as import("@/src/lib/portal/types").PurchaseRecord[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load media library");
       setItems([]);
@@ -191,7 +187,7 @@ export default function LibraryPage() {
                 duration={item.duration}
                 rating={item.avgRating}
                 year={String(item.releaseYear)}
-                category={item.genres[0]}
+                category={item.genres?.[0] || "Uncategorized"}
 
                 onClick={() => router.push(`/watch/${item.id}`)}
               />

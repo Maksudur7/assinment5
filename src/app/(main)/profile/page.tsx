@@ -5,6 +5,7 @@ import { User, Wallet, History } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/src/components/ui/badge";
+import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
@@ -138,19 +139,17 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-4">
                 {watchHistory.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center bg-input/50 p-4 rounded-md border border-border">
-                    <div>
-                      <Link href={`/watch/${item.id}`} className="text-foreground font-medium hover:text-primary transition-colors">
-                        {item.title}
-                      </Link>
+                  <Link key={item.mediaId} href={`/watch/${item.mediaId}`} className="flex gap-4 group p-2 hover:bg-white/5 rounded-lg transition-colors border border-transparent hover:border-white/10">
+                    <div className="w-40 h-24 shrink-0 rounded overflow-hidden relative bg-black">
+                      <ImageWithFallback src={item.poster} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                    <div className="flex flex-col justify-start flex-1 py-1">
+                      <h4 className="text-foreground text-lg font-medium leading-tight group-hover:text-primary transition-colors line-clamp-2 mb-1">{item.title}</h4>
                       <p className="text-sm text-muted-foreground">
                         Watched on {new Date(item.watchedAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-muted-foreground">
-                      {item.progressSeconds ? `${Math.floor(item.progressSeconds / 60)} mins` : "Started"}
-                    </Badge>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

@@ -318,6 +318,7 @@ export const httpPortalService = {
     call(`/watchlist/${mediaId}`, { method: "POST" }),
   getWatchlist: () => call("/watchlist"),
   getWatchHistory: () => call("/users/me/watch-history"),
+  addToHistory: (mediaId: string) => call(`/watchlist/history/${mediaId}`, { method: "POST" }),
 
   getPendingReviews: () => call("/admin/reviews/pending"),
   approveReview: (reviewId: string) =>
