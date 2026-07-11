@@ -317,6 +317,7 @@ export const httpPortalService = {
   toggleWatchlist: (mediaId: string) =>
     call(`/watchlist/${mediaId}`, { method: "POST" }),
   getWatchlist: () => call("/watchlist"),
+  getWatchHistory: () => call("/users/me/watch-history"),
 
   getPendingReviews: () => call("/admin/reviews/pending"),
   approveReview: (reviewId: string) =>

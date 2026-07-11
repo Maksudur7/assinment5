@@ -42,7 +42,7 @@ export default function WatchlistPage() {
                 duration={item.duration}
                 rating={item.avgRating}
                 year={String(item.releaseYear)}
-                category={item.genres[0]}
+                category={item.genres?.[0] || "Uncategorized"}
                 onClick={() => router.push(`/watch/${item.id}`)}
               />
             ))}

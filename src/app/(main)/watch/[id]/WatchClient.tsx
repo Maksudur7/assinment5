@@ -218,12 +218,17 @@ export function WatchClient({ id }: { id: string }) {
 
   async function toggleWatchlist() {
     if (!media) return;
-    const nextRaw = await portalService.toggleWatchlist(media.id);
-    // Defensive: nextRaw may be boolean or object
-    if (typeof nextRaw === "object" && nextRaw !== null && "saved" in nextRaw) {
-      setWatchSaved((nextRaw as { saved: boolean }).saved);
-    } else if (typeof nextRaw === "boolean") {
-      setWatchSaved(nextRaw);
+    const resRaw = await portalService.toggleWatchlist(media.id);
+    const res = resRaw as any;
+    if (res && res.action) {
+      setWatchSaved(res.action === "added");
+      toast.success(res.action === "added" ? "Added to watchlist" : "Removed from watchlist");
+    } else if (typeof res === "boolean") {
+      setWatchSaved(res);
+      toast.success(res ? "Added to watchlist" : "Removed from watchlist");
+    } else if (res && res.saved !== undefined) {
+      setWatchSaved(res.saved);
+      toast.success(res.saved ? "Added to watchlist" : "Removed from watchlist");
     }
   }
 
