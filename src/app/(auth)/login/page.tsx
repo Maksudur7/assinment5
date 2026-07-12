@@ -55,14 +55,26 @@ export default function Page() {
     }
   }
 
-  function applyDemoCredentials(type: "user" | "admin") {
-    if (type === "admin") {
-      setEmail("admin@ngv.local");
-      setPassword("admin12345");
-      return;
+  async function handleDemoLogin(type: "user" | "admin") {
+    const demoEmail = type === "admin" ? "admin@ngv.local" : "user@ngv.local";
+    const demoPassword = type === "admin" ? "admin12345" : "user12345";
+    
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      await authFetchers.login(demoEmail, demoPassword);
+      setSuccess(`Login successful. Redirecting to ${type === "admin" ? "Admin" : "User"} Dashboard...`);
+      window.location.href = type === "admin" ? "/admin" : "/dashboard";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
     }
-    setEmail("user@ngv.local");
-    setPassword("user12345");
   }
 
   return (
@@ -74,15 +86,17 @@ export default function Page() {
         <div className="grid grid-cols-2 gap-2 mb-6">
           <button
             type="button"
-            onClick={() => applyDemoCredentials("user")}
-            className="rounded border border-white/20 bg-white/5 py-2 text-sm text-white hover:bg-white/10 transition"
+            onClick={() => handleDemoLogin("user")}
+            disabled={loading}
+            className="rounded border border-white/20 bg-white/5 py-2 text-sm text-white hover:bg-white/10 transition disabled:opacity-50"
           >
             Demo User
           </button>
           <button
             type="button"
-            onClick={() => applyDemoCredentials("admin")}
-            className="rounded border border-white/20 bg-white/5 py-2 text-sm text-white hover:bg-white/10 transition"
+            onClick={() => handleDemoLogin("admin")}
+            disabled={loading}
+            className="rounded border border-white/20 bg-white/5 py-2 text-sm text-white hover:bg-white/10 transition disabled:opacity-50"
           >
             Demo Admin
           </button>
