@@ -8,13 +8,13 @@ import { authFetchers } from "@/src/lib/fetchers/core";
 export default function Page() {
   const [showPassword, setShowPassword] = useState(false);
 
-  const [email, setEmail] = useState(""); 
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
- 
+
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -56,12 +56,12 @@ export default function Page() {
   }
 
   async function handleDemoLogin(type: "user" | "admin") {
-    const demoEmail = type === "admin" ? "admin@ngv.local" : "user@ngv.local";
-    const demoPassword = type === "admin" ? "admin12345" : "user12345";
-    
+    const demoEmail = type === "admin" ? "admin@ngv.local" : "maksudurr538@gmail.com";
+    const demoPassword = type === "admin" ? "admin12345" : "mashud1215";
+
     setEmail(demoEmail);
     setPassword(demoPassword);
-    
+
     setError("");
     setSuccess("");
     setLoading(true);
@@ -109,38 +109,38 @@ export default function Page() {
         <form className="space-y-4" onSubmit={handleLogin}>
           <div>
             <label htmlFor="email" className="text-white text-sm">Email Address</label>
-            <input 
+            <input
               required
-              id="email" 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              placeholder="name@example.com" 
-              className="mt-1 w-full bg-zinc-800 border border-white/10 text-white px-3 py-2 rounded focus:outline-none focus:border-[#E50914] transition" 
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="mt-1 w-full bg-zinc-800 border border-white/10 text-white px-3 py-2 rounded focus:outline-none focus:border-[#E50914] transition"
             />
           </div>
           <div>
             <label htmlFor="password" className="text-white text-sm">Password</label>
             <div className="mt-1 flex gap-2">
-              <input 
+              <input
                 required
-                id="password" 
-                type={showPassword ? "text" : "password"} 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                placeholder="••••••••" 
-                className="w-full bg-zinc-800 border border-white/10 text-white px-3 py-2 rounded focus:outline-none focus:border-[#E50914] transition" 
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-zinc-800 border border-white/10 text-white px-3 py-2 rounded focus:outline-none focus:border-[#E50914] transition"
               />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword((v) => !v)} 
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
                 className="bg-white/10 text-white px-3 rounded hover:bg-white/20 transition"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
           </div>
-          
+
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 p-3 rounded">
               <p className="text-red-400 text-xs">{error}</p>
@@ -153,8 +153,8 @@ export default function Page() {
             </div>
           )}
 
-          <button 
-            disabled={loading} 
+          <button
+            disabled={loading}
             className="w-full bg-[#E50914] hover:bg-[#B2070F] disabled:opacity-50 text-white py-2 rounded font-semibold transition"
           >
             {loading ? "Signing in..." : "Login"}

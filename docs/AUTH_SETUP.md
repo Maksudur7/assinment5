@@ -166,7 +166,7 @@ All routes mapped in: `src/app/api/auth/[...all]/route.ts`
 ## 🚀 Testing During Frontend Development
 
 For now, the app uses in-memory storage. This resets on server restart:
-- Default demo user: `user@ngv.local / user123`
+- Default demo user: `maksudurr538@gmail.com / user123`
 - Default demo admin: `admin@ngv.local / admin123`
 - Social logins will fail until backend OAuth is set up
 
