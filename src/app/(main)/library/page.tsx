@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { VideoCard } from "@/src/components/VideoCard";
+import { AdSlot } from "@/src/components/AdSlot";
 import { Badge } from "@/src/components/ui/badge";
 import { Input } from "@/src/components/ui/input";
 import {
@@ -156,6 +157,9 @@ export default function LibraryPage() {
           </Select>
         </div>
 
+        {/* Top Banner Advertisement */}
+        <AdSlot type="banner-horizontal" className="w-full" />
+
         <div className="flex items-center justify-between">
           <Badge className="bg-primary text-primary-foreground">{total} titles</Badge>
           <p className="text-muted-foreground text-sm">Page {page} of {totalPages}</p>
@@ -212,6 +216,11 @@ export default function LibraryPage() {
           >
             Next
           </button>
+        </div>
+
+        {/* Bottom Banner Advertisement */}
+        <div className="pt-8 pb-4">
+          <AdSlot type="banner-horizontal" className="w-full" />
         </div>
       </div>
     </div>

@@ -8,6 +8,7 @@ import Hls from "hls.js";
 
 import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { VideoCard } from "@/src/components/VideoCard";
+import { AdSlot } from "@/src/components/AdSlot";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -386,6 +387,9 @@ export function WatchClient({ id }: { id: string }) {
             </div>
           </div>
 
+          {/* Below-Player Advertisement */}
+          <AdSlot type="below-player" />
+
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-6 space-y-4">
             <h2 className="text-white text-xl">Write a Review</h2>
             <div className="grid md:grid-cols-3 gap-3">
@@ -485,18 +489,7 @@ export function WatchClient({ id }: { id: string }) {
 
         <aside className="space-y-6">
           {/* Advertisement Slot */}
-          <div className="rounded-lg border border-white/10 bg-zinc-900 overflow-hidden">
-            <div className="w-full h-96 bg-gradient-to-br from-zinc-800 to-zinc-900 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/5 rounded-lg relative overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(229,9,20,0.05)_0%,_transparent_100%)]" />
-              <div className="relative z-10 space-y-2">
-                <div className="w-12 h-12 rounded-full bg-zinc-800 mx-auto flex items-center justify-center border border-white/10">
-                  <PlayCircle className="w-6 h-6 text-white/20" />
-                </div>
-                <p className="text-white/20 text-xs uppercase tracking-widest">Advertisement</p>
-                <p className="text-white/10 text-xs">300 × 384 Ad Slot</p>
-              </div>
-            </div>
-          </div>
+          <AdSlot type="sidebar-rectangle" />
 
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">
             <Tabs defaultValue="related" className="w-full">

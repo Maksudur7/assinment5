@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, Loader } from "lucide-react";
+import { AdSlot } from "@/src/components/AdSlot";
 
 import { Input } from "@/src/components/ui/input";
 import { VideoCard } from "@/src/components/VideoCard";
@@ -65,6 +66,11 @@ export default function SearchPage() {
               className="bg-transparent border-0 text-foreground placeholder:text-muted-foreground focus-visible:ring-0 text-base p-0 h-auto"
             />
           </div>
+        </div>
+
+        {/* Search Banner Advertisement */}
+        <div className="mb-10">
+          <AdSlot type="banner-horizontal" />
         </div>
 
         {/* Results */}

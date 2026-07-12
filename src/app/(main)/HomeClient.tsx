@@ -304,6 +304,11 @@ export function HomeClient({
                 ))}
               </div>
             </div>
+            
+            {/* In-Feed Advertisement */}
+            <div className="mb-12">
+              <AdSlot type="in-feed" />
+            </div>
 
             {/* Statistics */}
             <div className="mb-12 rounded-xl border border-border bg-card p-6">
