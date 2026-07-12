@@ -17,6 +17,7 @@ import {
 import { mediaFetchers } from "@/src/lib/fetchers/core";
 import { portalService } from "@/src/lib/portal";
 import type { MediaItem, UserRole } from "@/src/lib/portal/types";
+import { useDebounce } from "@/src/hooks/use-debounce";
 
 const PAGE_SIZE = 8;
 
@@ -28,6 +29,7 @@ export default function LibraryPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [genre, setGenre] = useState("all");
   const [platform, setPlatform] = useState("all");
   const [releaseYear, setReleaseYear] = useState("all");
@@ -45,7 +47,7 @@ export default function LibraryPage() {
         mediaFetchers.list({
           page,
           pageSize: PAGE_SIZE,
-          search,
+          search: debouncedSearch,
           genre: genre === "all" ? undefined : genre,
           platform: platform === "all" ? undefined : platform,
           releaseYear: releaseYear === "all" ? undefined : Number(releaseYear),
@@ -67,7 +69,7 @@ export default function LibraryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, genre, platform, releaseYear, minRating, maxRating, popularity, sort]);
+  }, [page, debouncedSearch, genre, platform, releaseYear, minRating, maxRating, popularity, sort]);
 
   useEffect(() => {
     void load();

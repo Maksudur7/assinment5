@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
-import { MessageCircle, ShieldAlert, ShoppingCart, ThumbsUp, Eye, Users, PlayCircle } from "lucide-react";
-import { useRef } from "react";
+import { MessageCircle, ShieldAlert, ThumbsUp, Eye, Users, PlayCircle, Loader2 } from "lucide-react";
+import Hls from "hls.js";
+
 
 import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { VideoCard } from "@/src/components/VideoCard";
@@ -72,10 +73,11 @@ export function WatchClient({ id }: { id: string }) {
   const [viewCount, setViewCount] = useState<number>(0);
   const [userCount, setUserCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-
-  console.log('media', media)
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [lastSavedTime, setLastSavedTime] = useState(0);
 
   const loadAll = useCallback(async (silent = false) => {
+
     if (!silent) setLoading(true);
     try {
       const [meRaw, itemRaw, listRaw] = await Promise.all([
@@ -124,7 +126,6 @@ export function WatchClient({ id }: { id: string }) {
   useEffect(() => {
     let mounted = true;
     
-    // On mount: increment view count only once (protect against React Strict Mode double-mount)
     if (!hasIncremented.current) {
       hasIncremented.current = true;
       incrementView(id).then((stats) => {
@@ -133,37 +134,75 @@ export function WatchClient({ id }: { id: string }) {
           setUserCount(stats.currentViewers);
         }
       });
-      // Add to watch history
       portalService.addToHistory(id).catch(console.error);
     }
 
-    // Poll for real-time stats
-    const poll = async () => {
-      const stats = await getViewStats(id);
-      if (stats && mounted) {
-        setViewCount(stats.viewCount);
-        setUserCount(stats.currentViewers);
+    // Connect Server-Sent Events (SSE) for real-time stats
+    const eventSource = new EventSource(`${API_URL}/media/${id}/viewers/stream`);
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (mounted) {
+          setViewCount(data.viewCount);
+          setUserCount(data.currentViewers);
+        }
+      } catch (e) {
+        console.error("SSE parse error", e);
       }
     };
-    const interval = setInterval(poll, 5000);
 
-    // Reliable decrement on tab close
     const handleUnload = () => {
       navigator.sendBeacon(`${API_URL}/media/${id}/decrement-viewer`);
     };
     window.addEventListener("beforeunload", handleUnload);
 
-    // On unmount: decrement viewer count
     return () => {
       mounted = false;
-      clearInterval(interval);
+      eventSource.close();
       window.removeEventListener("beforeunload", handleUnload);
-      
-      // If we are unmounting completely (e.g. navigating away), decrement.
-      // Note: React 18 strict mode may still call this, but the beforeunload is the real fix for stuck viewers.
       decrementViewer(id);
     };
   }, [id]);
+
+  // Handle Video Player Setup & Progress
+  useEffect(() => {
+    if (!media || !videoRef.current) return;
+    const video = videoRef.current;
+    let hls: Hls | null = null;
+    const isHls = media.streamingUrl.endsWith(".m3u8");
+
+    // Load progress
+    portalService.getWatchProgress(media.id).then((progress) => {
+      if (progress && progress.progressSeconds > 0) {
+        video.currentTime = progress.progressSeconds;
+      }
+    }).catch(console.error);
+
+    if (isHls && Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(media.streamingUrl);
+      hls.attachMedia(video);
+    } else {
+      video.src = media.streamingUrl;
+    }
+
+    const onTimeUpdate = () => {
+      const currentTime = Math.floor(video.currentTime);
+      if (currentTime > 0 && currentTime - lastSavedTime >= 10) {
+        setLastSavedTime(currentTime);
+        portalService.updateWatchProgress(media.id, currentTime).catch(console.error);
+      }
+    };
+
+    video.addEventListener("timeupdate", onTimeUpdate);
+
+    return () => {
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [media, lastSavedTime]);
 
   // Initial data load
   useEffect(() => {
@@ -284,11 +323,12 @@ export function WatchClient({ id }: { id: string }) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Media not found.</div>;
   }
 
-  // Helper to check if the streamingUrl is a YouTube link
+  // Helper to get privacy-enhanced YouTube embed URL (no-cookie domain)
   function getYouTubeEmbedUrl(url: string) {
-    // Accepts both youtu.be and youtube.com links
     const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/);
-    return ytMatch ? `https://www.youtube.com/embed/${ytMatch[1]}` : null;
+    if (!ytMatch) return null;
+    // Use youtube-nocookie.com for enhanced privacy (no tracking cookies)
+    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?rel=0&modestbranding=1&color=white`;
   }
 
   const youTubeEmbedUrl = getYouTubeEmbedUrl(media.streamingUrl);
@@ -317,7 +357,16 @@ export function WatchClient({ id }: { id: string }) {
                 />
               </div>
             ) : (
-              <ImageWithFallback src={media.poster} alt={media.title} className="w-full aspect-video object-cover" />
+              <div className="w-full aspect-video bg-black flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  controls
+                  poster={media.poster}
+                  className="w-full h-full object-contain outline-none"
+                  crossOrigin="anonymous"
+                  playsInline
+                />
+              </div>
             )}
             <div className="p-5">
               <h1 className="text-white text-3xl mb-2">{media.title}</h1>
@@ -330,11 +379,6 @@ export function WatchClient({ id }: { id: string }) {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {!youTubeEmbedUrl ? (
-                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
-                    <a href={media.streamingUrl} target="_blank" rel="noreferrer">Stream Now</a>
-                  </Button>
-                ) : null}
                 <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={toggleWatchlist}>
                   {watchSaved ? "Remove from Watchlist" : "Add to Watchlist"}
                 </Button>
@@ -440,23 +484,16 @@ export function WatchClient({ id }: { id: string }) {
         </div>
 
         <aside className="space-y-6">
-          {/* Advertisement Placeholder */}
-          <div className="rounded-lg border border-white/10 bg-zinc-900 overflow-hidden relative group">
-            <div className="absolute top-2 right-2 bg-black/60 text-white/50 text-[10px] uppercase px-1.5 py-0.5 rounded backdrop-blur-sm z-10 cursor-pointer hover:text-white transition-colors">
-              Ad
-            </div>
+          {/* Advertisement Slot */}
+          <div className="rounded-lg border border-white/10 bg-zinc-900 overflow-hidden">
             <div className="w-full h-96 bg-gradient-to-br from-zinc-800 to-zinc-900 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/5 rounded-lg relative overflow-hidden">
-              {/* Optional background image effect */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(229,9,20,0.1)_0%,_transparent_100%)] opacity-50" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(229,9,20,0.05)_0%,_transparent_100%)]" />
               <div className="relative z-10 space-y-2">
                 <div className="w-12 h-12 rounded-full bg-zinc-800 mx-auto flex items-center justify-center border border-white/10">
-                  <PlayCircle className="w-6 h-6 text-[#E50914]" />
+                  <PlayCircle className="w-6 h-6 text-white/20" />
                 </div>
-                <h3 className="text-white font-medium text-lg">Premium Access</h3>
-                <p className="text-white/50 text-sm">Unlock exclusive 4K content and ad-free viewing.</p>
-                <Button className="mt-2 bg-[#E50914] hover:bg-[#B2070F] text-white h-8 text-xs">
-                  Upgrade Now
-                </Button>
+                <p className="text-white/20 text-xs uppercase tracking-widest">Advertisement</p>
+                <p className="text-white/10 text-xs">300 × 384 Ad Slot</p>
               </div>
             </div>
           </div>
@@ -524,13 +561,8 @@ export function WatchClient({ id }: { id: string }) {
             </Tabs>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">
-            <h3 className="text-white mb-2 flex items-center gap-2"><ShoppingCart className="w-4 h-4" />Integration Ready</h3>
-            <p className="text-white/60 text-sm">
-              This page uses a service abstraction; switch to real backend by setting NEXT_PUBLIC_USE_REMOTE_API=true and implementing API endpoints.
-            </p>
-          </div>
         </aside>
+
       </div>
     </div>
   );

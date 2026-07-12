@@ -30,7 +30,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full bg-background text-foreground transition-colors duration-300">
+      <body 
+        className="min-h-full bg-background text-foreground transition-colors duration-300"
+        suppressHydrationWarning
+      >
         <Providers>
           {/* Jodi Providers.tsx er bhitore ThemeProvider thake, tobe aikhane lagbe na */}
           {children}

@@ -6,10 +6,6 @@ const faqs = [
     a: "User reviews are submitted as pending. Admin can approve or unpublish based on moderation policy.",
   },
   {
-    q: "Can I rent and buy titles?",
-    a: "Yes. Frontend flows for rent/buy/subscription are already present and ready for payment API integration.",
-  },
-  {
     q: "Is watchlist synced in real-time?",
     a: "Currently local mock state is used. Switching to backend API makes it real-time and persistent across devices.",
   },

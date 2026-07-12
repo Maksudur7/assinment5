@@ -16,8 +16,6 @@ export const authFetchers = {
   async me() {
     const sessionData = await portalService.getCurrentUser();
 
-    console.log("my data ", sessionData);
-
     if (!sessionData || !sessionData.user) {
       throw new Error("Failed to fetch current user");
     }
@@ -48,20 +46,13 @@ export const authFetchers = {
       (res as any).session?.token ||
       (res as any).accessToken ||
       (res as any).jwt;
-    console.log("[DEBUG] sessionToken:", sessionToken);
+
     if (sessionToken) {
       setAuthToken(sessionToken);
-      console.log("[DEBUG] setAuthToken called with:", sessionToken);
     }
 
     if (res.user) {
       setStoredUser({
-        id: res.user.id,
-        name: res.user.name,
-        email: res.user.email,
-        role: (res.user as any).role || "user",
-      });
-      console.log("[DEBUG] setStoredUser called with:", {
         id: res.user.id,
         name: res.user.name,
         email: res.user.email,
@@ -89,20 +80,13 @@ export const authFetchers = {
       (res as any).session?.token ||
       (res as any).accessToken ||
       (res as any).jwt;
-    console.log("[DEBUG] sessionToken:", sessionToken);
+
     if (sessionToken) {
       setAuthToken(sessionToken);
-      console.log("[DEBUG] setAuthToken called with:", sessionToken);
     }
 
     if (res.user) {
       setStoredUser({
-        id: res.user.id,
-        name: res.user.name,
-        email: res.user.email,
-        role: (res.user as any).role || "user",
-      });
-      console.log("[DEBUG] setStoredUser called with:", {
         id: res.user.id,
         name: res.user.name,
         email: res.user.email,

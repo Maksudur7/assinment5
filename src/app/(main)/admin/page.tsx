@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [mediaSearch, setMediaSearch] = useState("");
   const [mediaPage, setMediaPage] = useState(1);
+  const [mediaTotalPages, setMediaTotalPages] = useState(1);
 
   // Landing CMS state
   const [highlights, setHighlights] = useState<LandingHighlight[]>([]);
@@ -53,11 +54,16 @@ export default function AdminPage() {
   const [testimonialForm, setTestimonialForm] = useState({ name: "", quote: "" });
   const [faqForm, setFaqForm] = useState({ question: "", answer: "" });
 
+  async function loadMedia(page = 1, search = "") {
+    const result = await portalService.getMedia({ page, pageSize: MEDIA_PAGE_SIZE, search }) as any;
+    setMedia(result.items || []);
+    setMediaTotalPages(result.totalPages || 1);
+  }
+
   async function load() {
-    const [me, adminOverview, mediaResult, reviews, comments, landingRes] = await Promise.all([
+    const [me, adminOverview, reviews, comments, landingRes] = await Promise.all([
       portalService.getCurrentUser(),
       portalService.getAdminOverview() as Promise<AdminOverview>,
-      portalService.getMedia({ page: 1, pageSize: 100 }) as Promise<{ items: MediaItem[] }>,
       portalService.getPendingReviews() as Promise<Review[]>,
       portalService.getPendingComments() as Promise<ReviewComment[]>,
       portalService.getLandingContent().catch(() => ({ success: false, data: { highlights: [], testimonials: [], faqs: [] } })),
@@ -65,7 +71,6 @@ export default function AdminPage() {
 
     setUser(me);
     setOverview(adminOverview);
-    setMedia(mediaResult.items);
     setPendingReviews(reviews);
     setPendingComments(comments);
     
@@ -82,6 +87,12 @@ export default function AdminPage() {
     }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (user && user.role === "admin") {
+      void loadMedia(mediaPage, mediaSearch);
+    }
+  }, [mediaPage, mediaSearch, user]);
 
   async function saveMedia() {
     setMessage("");
@@ -109,6 +120,7 @@ export default function AdminPage() {
       setEditingId(null);
       setForm(EMPTY_FORM);
       await load();
+      await loadMedia(mediaPage, mediaSearch);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to save media");
     }
@@ -133,6 +145,7 @@ export default function AdminPage() {
   async function removeMedia(id: string) {
     await portalService.deleteMedia(id);
     await load();
+    await loadMedia(mediaPage, mediaSearch);
   }
 
   async function approveReview(id: string) {
@@ -212,20 +225,7 @@ export default function AdminPage() {
   async function handleDeleteFaq(id: string) {
     await adminLandingFetchers.deleteFaq(id);
     await load();
-  }  const filteredMedia = useMemo(() => {
-    const q = mediaSearch.trim().toLowerCase();
-    if (!q) return media;
-    return media.filter((m) => m.title.toLowerCase().includes(q) || String(m.releaseYear).includes(q));
-  }, [media, mediaSearch]);
-
-  const mediaTotalPages = useMemo(() => Math.max(1, Math.ceil(filteredMedia.length / MEDIA_PAGE_SIZE)), [filteredMedia.length]);
-
-  const paginatedMedia = useMemo(() => {
-    const start = (mediaPage - 1) * MEDIA_PAGE_SIZE;
-    return filteredMedia.slice(start, start + MEDIA_PAGE_SIZE);
-  }, [filteredMedia, mediaPage]);
-
-
+  }
 
   if (!user) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Loading admin console...</div>;
@@ -302,7 +302,7 @@ export default function AdminPage() {
                 <div><Label className="text-white">Synopsis</Label><Textarea className="bg-zinc-800 border-white/10 text-white" value={form.synopsis} onChange={(e) => setForm((p) => ({ ...p, synopsis: e.target.value }))} /></div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><Label className="text-white">Genres (comma)</Label><Input className="bg-zinc-800 border-white/10 text-white" value={form.genres} onChange={(e) => setForm((p) => ({ ...p, genres: e.target.value }))} /></div>
-                  <div><Label className="text-white">Release Year</Label><Input className="bg-zinc-800 border-white/10 text-white" value={form.releaseYear} onChange={(e) => setForm((p) => ({ ...p, releaseYear: e.target.value }))} /></div>
+                  <div><Label className="text-white">Release Year</Label><Input type="number" className="bg-zinc-800 border-white/10 text-white" value={form.releaseYear} onChange={(e) => setForm((p) => ({ ...p, releaseYear: e.target.value }))} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><Label className="text-white">Director</Label><Input className="bg-zinc-800 border-white/10 text-white" value={form.director} onChange={(e) => setForm((p) => ({ ...p, director: e.target.value }))} /></div>
@@ -347,13 +347,13 @@ export default function AdminPage() {
                     <TableRow className="border-white/10"><TableHead className="text-white">Title</TableHead><TableHead className="text-white">Year</TableHead><TableHead className="text-white">Actions</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedMedia.map((m) => (
+                    {media.map((m) => (
                       <TableRow key={m.id} className="border-white/10">
                         <TableCell className="text-white">{m.title}</TableCell>
                         <TableCell className="text-white/70">{m.releaseYear}</TableCell>
                         <TableCell className="space-x-2">
-                          <Button size="sm" variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => void editMedia(m)}>Edit</Button>
-                          <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" onClick={() => void removeMedia(m.id)}><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                           <Button size="sm" variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => void editMedia(m)}>Edit</Button>
+                           <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" onClick={() => void removeMedia(m.id)}><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
                         </TableCell>
                       </TableRow>
                     ))}

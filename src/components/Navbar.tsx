@@ -3,8 +3,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useTheme } from "next-themes"; // Added
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useTheme } from "next-themes";
+
 import {
   Bell,
   Menu,
@@ -13,12 +14,10 @@ import {
   Home,
   Film,
   LayoutDashboard,
-  BadgeDollarSign,
-  CreditCard,
   Shield,
   X,
-  Sun, // Added
-  Moon, // Added
+  Sun,
+  Moon,
 } from "lucide-react";
 
 import { Button } from "./ui/button";
@@ -33,7 +32,8 @@ import {
 import { authClient } from "@/src/lib/auth-client";
 import { getStoredUser, clearStore } from "@/src/lib/portal/storage";
 import { httpPortalService } from "@/src/lib/portal/httpService";
-import type { UserRole } from "@/src/lib/portal/types";
+import { portalService } from "@/src/lib/portal";
+import type { UserRole, MediaItem } from "@/src/lib/portal/types";
 import { cn } from "./ui/utils";
 
 export function Navbar() {
@@ -45,6 +45,51 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [liveResults, setLiveResults] = useState<MediaItem[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setSearchQuery(val);
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      
+      if (val.trim().length >= 2) {
+        setShowDropdown(true);
+        setIsSearching(true);
+        searchDebounceRef.current = setTimeout(async () => {
+          try {
+            const results = await portalService.searchMedia(val.trim());
+            setLiveResults(results.slice(0, 5));
+          } catch (error) {
+            console.error(error);
+          } finally {
+            setIsSearching(false);
+          }
+        }, 400);
+      } else {
+        setShowDropdown(false);
+        setLiveResults([]);
+      }
+    },
+    [],
+  );
+
+  const handleSearchSubmit = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter" && searchQuery.trim()) {
+        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+        setShowDropdown(false);
+        if (mobileMenuOpen) setMobileMenuOpen(false);
+        router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      }
+    },
+    [router, searchQuery, mobileMenuOpen],
+  );
+
 
   // Mount logic for hydration safety
   useEffect(() => {
@@ -146,12 +191,53 @@ export function Navbar() {
             </Button>
 
             {/* Search Bar */}
-            <div className="hidden lg:flex items-center gap-2 bg-accent dark:bg-white/5 rounded-full px-4 py-1.5 border border-border dark:border-white/10 focus-within:border-primary dark:focus-within:border-white/30 transition-all">
-              <Search className="w-4 h-4 text-muted-foreground dark:text-white/40" />
-              <Input
-                placeholder="Search..."
-                className="bg-transparent border-0 text-sm text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/40 focus-visible:ring-0 h-8 w-40 p-0"
-              />
+            <div className="hidden lg:flex relative">
+              <div className="flex items-center gap-2 bg-accent dark:bg-white/5 rounded-full px-4 py-1.5 border border-border dark:border-white/10 focus-within:border-primary dark:focus-within:border-white/30 transition-all">
+                <Search className="w-4 h-4 text-muted-foreground dark:text-white/40" />
+                <Input
+                  placeholder="Search titles..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onKeyDown={handleSearchSubmit}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                  onFocus={() => { if (searchQuery.length >= 2) setShowDropdown(true); }}
+                  className="bg-transparent border-0 text-sm text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-white/40 focus-visible:ring-0 h-8 w-40 p-0"
+                />
+              </div>
+
+              {/* Live Search Dropdown */}
+              {showDropdown && (
+                <div className="absolute top-12 right-0 w-64 bg-background dark:bg-zinc-950 border border-border dark:border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+                  {isSearching ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">Searching...</div>
+                  ) : liveResults.length > 0 ? (
+                    <div className="py-2">
+                      {liveResults.map((item) => (
+                        <Link
+                          key={item.id}
+                          href={`/watch/${item.id}`}
+                          onClick={() => setShowDropdown(false)}
+                          className="flex flex-col px-4 py-2 hover:bg-accent dark:hover:bg-white/5 transition-colors"
+                        >
+                          <span className="text-sm font-medium text-foreground dark:text-white truncate">{item.title}</span>
+                          <span className="text-xs text-muted-foreground">{item.releaseYear} • {item.genres[0]}</span>
+                        </Link>
+                      ))}
+                      <div className="border-t border-border dark:border-white/10 mt-2">
+                        <Link 
+                          href={`/search?q=${encodeURIComponent(searchQuery)}`}
+                          onClick={() => setShowDropdown(false)}
+                          className="block px-4 py-2 text-xs font-semibold text-center text-primary dark:text-red-500 hover:underline"
+                        >
+                          View All Results
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">No results found</div>
+                  )}
+                </div>
+              )}
             </div>
 
             <Button
@@ -249,6 +335,17 @@ export function Navbar() {
               </Button>
             </div>
             <nav className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 bg-accent dark:bg-white/5 rounded-xl px-4 py-2 border border-border dark:border-white/10 mb-4">
+                <Search className="w-5 h-5 text-muted-foreground dark:text-white/40" />
+                <Input
+                  placeholder="Search titles..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchSubmit}
+                  className="bg-transparent border-0 text-base text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-0 h-10 w-full p-0"
+                />
+              </div>
+
               {navItems.map((item) => (
                 <Link
                   key={item.href}
