@@ -1,20 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
-import { MessageCircle, ShieldAlert, ShoppingCart, ThumbsUp } from "lucide-react";
+import { MessageCircle, ShieldAlert, ThumbsUp, Eye, Users, PlayCircle, Loader2 } from "lucide-react";
+import Hls from "hls.js";
+
 
 import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { VideoCard } from "@/src/components/VideoCard";
+import { AdSlot } from "@/src/components/AdSlot";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { portalService } from "@/src/lib/portal";
-import { canAccessMedia, getActiveSubscription } from "@/src/lib/portal/entitlements";
 import { reviewFetchers } from "@/src/lib/fetchers/core";
-import type { MediaItem, PortalUser, PurchaseRecord, Review, ReviewComment } from "@/src/lib/portal/types";
+import type { MediaItem, PortalUser, Review, ReviewComment } from "@/src/lib/portal/types";
 
 
 // Real-time view/user count API helpers
@@ -50,6 +53,8 @@ async function getViewStats(id: string) {
 
 
 import { Loader } from "lucide-react";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
 
 export function WatchClient({ id }: { id: string }) {
   const [user, setUser] = useState<PortalUser | null>(null);
@@ -65,23 +70,21 @@ export function WatchClient({ id }: { id: string }) {
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [replyTarget, setReplyTarget] = useState<Record<string, string | null>>({});
   const [watchSaved, setWatchSaved] = useState(false);
-  const [myPurchases, setMyPurchases] = useState(0);
-  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
   // Real-time view/user count
   const [viewCount, setViewCount] = useState<number>(0);
   const [userCount, setUserCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [lastSavedTime, setLastSavedTime] = useState(0);
 
-  console.log('media', media)
+  const loadAll = useCallback(async (silent = false) => {
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
-      const [meRaw, itemRaw, listRaw, purchaseHistoryRaw] = await Promise.all([
+      const [meRaw, itemRaw, listRaw] = await Promise.all([
         portalService.getCurrentUser(),
         portalService.getMediaById(id),
         portalService.getMedia({ page: 1, pageSize: 20 }),
-        portalService.getPurchaseHistory(),
       ]);
 
       // Type guards and assertions
@@ -94,13 +97,9 @@ export function WatchClient({ id }: { id: string }) {
       const list = (listRaw && typeof listRaw === "object" && "items" in listRaw && Array.isArray((listRaw as { items?: unknown }).items)) ? (listRaw as { items: MediaItem[] }) : { items: [] };
       setAllMedia(list.items as MediaItem[]);
 
-      const purchaseHistory = Array.isArray(purchaseHistoryRaw) ? (purchaseHistoryRaw as PurchaseRecord[]) : [];
-      setMyPurchases((purchaseHistory as PurchaseRecord[]).length);
-      setPurchaseHistory(purchaseHistory as PurchaseRecord[]);
-
       if (item && me) {
-        // getReviews now expects only 1 argument (mediaId)
-        const rRaw = await portalService.getReviews(item.id);
+        // getReviews now expects 2 arguments: mediaId and includePending
+        const rRaw = await portalService.getReviews(item.id, true);
         const r = Array.isArray(rRaw) ? (rRaw as Review[]) : [];
         setReviews(r as Review[]);
         const cmts: Record<string, ReviewComment[]> = {};
@@ -119,35 +118,92 @@ export function WatchClient({ id }: { id: string }) {
         setWatchSaved((watchlist as MediaItem[]).some((w: MediaItem) => w && w.id === item.id));
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id]);
 
+  const hasIncremented = useRef(false);
+
   useEffect(() => {
     let mounted = true;
-    // On mount: increment view count and start polling
-    incrementView(id).then((stats) => {
-      if (stats && mounted) {
-        setViewCount(stats.viewCount);
-        setUserCount(stats.currentViewers);
-      }
-    });
-    // Poll for real-time stats
-    const poll = async () => {
-      const stats = await getViewStats(id);
-      if (stats && mounted) {
-        setViewCount(stats.viewCount);
-        setUserCount(stats.currentViewers);
+    
+    if (!hasIncremented.current) {
+      hasIncremented.current = true;
+      incrementView(id).then((stats) => {
+        if (stats && mounted) {
+          setViewCount(stats.viewCount);
+          setUserCount(stats.currentViewers);
+        }
+      });
+      portalService.addToHistory(id).catch(console.error);
+    }
+
+    // Connect Server-Sent Events (SSE) for real-time stats
+    const eventSource = new EventSource(`${API_URL}/media/${id}/viewers/stream`);
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (mounted) {
+          setViewCount(data.viewCount);
+          setUserCount(data.currentViewers);
+        }
+      } catch (e) {
+        console.error("SSE parse error", e);
       }
     };
-    const interval = setInterval(poll, 5000);
-    // On unmount: decrement viewer count
+
+    const handleUnload = () => {
+      navigator.sendBeacon(`${API_URL}/media/${id}/decrement-viewer`);
+    };
+    window.addEventListener("beforeunload", handleUnload);
+
     return () => {
       mounted = false;
-      clearInterval(interval);
+      eventSource.close();
+      window.removeEventListener("beforeunload", handleUnload);
       decrementViewer(id);
     };
   }, [id]);
+
+  // Handle Video Player Setup & Progress
+  useEffect(() => {
+    if (!media || !videoRef.current) return;
+    const video = videoRef.current;
+    let hls: Hls | null = null;
+    const isHls = media.streamingUrl.endsWith(".m3u8");
+
+    // Load progress
+    (portalService as any).getWatchProgress(media.id).then((progress: any) => {
+      if (progress && progress.progressSeconds > 0) {
+        video.currentTime = progress.progressSeconds;
+      }
+    }).catch(console.error);
+
+    if (isHls && Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(media.streamingUrl);
+      hls.attachMedia(video);
+    } else {
+      video.src = media.streamingUrl;
+    }
+
+    const onTimeUpdate = () => {
+      const currentTime = Math.floor(video.currentTime);
+      if (currentTime > 0 && currentTime - lastSavedTime >= 10) {
+        setLastSavedTime(currentTime);
+        (portalService as any).updateWatchProgress(media.id, currentTime).catch(console.error);
+      }
+    };
+
+    video.addEventListener("timeupdate", onTimeUpdate);
+
+    return () => {
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [media, lastSavedTime]);
 
   // Initial data load
   useEffect(() => {
@@ -160,12 +216,7 @@ export function WatchClient({ id }: { id: string }) {
     [allMedia, id],
   );
 
-  const canStreamCurrent = useMemo(() => {
-    if (!media || !user) return false;
-    return canAccessMedia(media, user.role, purchaseHistory);
-  }, [media, user, purchaseHistory]);
 
-  const activeSubscription = useMemo(() => getActiveSubscription(purchaseHistory), [purchaseHistory]);
 
   async function submitReview() {
     if (!media || !content.trim()) return;
@@ -184,10 +235,11 @@ export function WatchClient({ id }: { id: string }) {
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         spoiler,
       });
+      toast.success("Review submitted successfully! It is now pending admin approval.");
     }
     setEditingReviewId(null);
     setContent("");
-    await loadAll();
+    await loadAll(true);
   }
 
   async function deleteOwnReview(reviewId: string) {
@@ -199,7 +251,8 @@ export function WatchClient({ id }: { id: string }) {
       setSpoiler(false);
       setRating("8");
     }
-    await loadAll();
+    toast.success("Review deleted successfully.");
+    await loadAll(true);
   }
 
   function beginEditReview(review: Review) {
@@ -212,7 +265,7 @@ export function WatchClient({ id }: { id: string }) {
 
   async function likeReview(reviewId: string) {
     await reviewFetchers.toggleLike(reviewId);
-    await loadAll();
+    await loadAll(true);
   }
 
   async function addComment(reviewId: string) {
@@ -221,36 +274,43 @@ export function WatchClient({ id }: { id: string }) {
     await reviewFetchers.comment(reviewId, text);
     setCommentInput((prev) => ({ ...prev, [reviewId]: "" }));
     setReplyTarget((prev) => ({ ...prev, [reviewId]: null }));
-    await loadAll();
+    toast.success("Comment added!");
+    await loadAll(true);
   }
 
   async function toggleWatchlist() {
     if (!media) return;
-    const nextRaw = await portalService.toggleWatchlist(media.id);
-    // Defensive: nextRaw may be boolean or object
-    if (typeof nextRaw === "object" && nextRaw !== null && "saved" in nextRaw) {
-      setWatchSaved((nextRaw as { saved: boolean }).saved);
-    } else if (typeof nextRaw === "boolean") {
-      setWatchSaved(nextRaw);
+    const resRaw = await portalService.toggleWatchlist(media.id);
+    const res = resRaw as any;
+    if (res && res.action) {
+      setWatchSaved(res.action === "added");
+      toast.success(res.action === "added" ? "Added to watchlist" : "Removed from watchlist");
+    } else if (typeof res === "boolean") {
+      setWatchSaved(res);
+      toast.success(res ? "Added to watchlist" : "Removed from watchlist");
+    } else if (res && res.saved !== undefined) {
+      setWatchSaved(res.saved);
+      toast.success(res.saved ? "Added to watchlist" : "Removed from watchlist");
     }
   }
 
-  async function purchase(type: "rent" | "buy" | "subscription") {
-    if (!media) return;
-    await portalService.createPurchase(type, media.id, {} as Record<string, unknown>);
-    await loadAll();
-  }
 
   async function approveReview(reviewId: string) {
     await portalService.approveReview(reviewId);
-    await loadAll();
+    toast.success("Review approved.");
+    await loadAll(true);
   }
 
   async function unpublishReview(reviewId: string) {
     await portalService.unpublishReview(reviewId);
-    await loadAll();
+    toast.success("Review unpublished.");
+    await loadAll(true);
   }
 
+
+  const popular = useMemo(() => {
+    return [...allMedia].sort((a, b) => b.avgRating - a.avgRating).filter(m => m.id !== id).slice(0, 6);
+  }, [allMedia, id]);
 
   if (loading) {
     return (
@@ -264,11 +324,12 @@ export function WatchClient({ id }: { id: string }) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Media not found.</div>;
   }
 
-  // Helper to check if the streamingUrl is a YouTube link
+  // Helper to get privacy-enhanced YouTube embed URL (no-cookie domain)
   function getYouTubeEmbedUrl(url: string) {
-    // Accepts both youtu.be and youtube.com links
     const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/);
-    return ytMatch ? `https://www.youtube.com/embed/${ytMatch[1]}` : null;
+    if (!ytMatch) return null;
+    // Use youtube-nocookie.com for enhanced privacy (no tracking cookies)
+    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?rel=0&modestbranding=1&color=white`;
   }
 
   const youTubeEmbedUrl = getYouTubeEmbedUrl(media.streamingUrl);
@@ -279,11 +340,11 @@ export function WatchClient({ id }: { id: string }) {
         <div className="space-y-6">
           <div className="rounded-lg overflow-hidden  border border-white/10 bg-zinc-900">
             {/* Real-time stats */}
-            <div className="flex items-center gap-6 px-5 pt-4 pb-2">
-              <span className="text-white/80 text-sm">👁️ {viewCount} views</span>
-              <span className="text-white/80 text-sm">🟢 {userCount} watching now</span>
+            <div className="flex items-center gap-6 px-5 pt-4 pb-2 border-b border-white/5">
+              <span className="text-white/80 text-sm flex items-center gap-2"><Eye className="w-4 h-4" /> {viewCount} views</span>
+              <span className="text-white/80 text-sm flex items-center gap-2 text-green-400"><Users className="w-4 h-4" /> {userCount} watching now</span>
             </div>
-            {canStreamCurrent && youTubeEmbedUrl ? (
+            {youTubeEmbedUrl ? (
               <div className="w-full aspect-video bg-black flex items-center justify-center">
                 <iframe
                   width="100%"
@@ -297,7 +358,16 @@ export function WatchClient({ id }: { id: string }) {
                 />
               </div>
             ) : (
-              <ImageWithFallback src={media.poster} alt={media.title} className="w-full aspect-video object-cover" />
+              <div className="w-full aspect-video bg-black flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  controls
+                  poster={media.poster}
+                  className="w-full h-full object-contain outline-none"
+                  crossOrigin="anonymous"
+                  playsInline
+                />
+              </div>
             )}
             <div className="p-5">
               <h1 className="text-white text-3xl mb-2">{media.title}</h1>
@@ -306,47 +376,19 @@ export function WatchClient({ id }: { id: string }) {
               <p className="text-white/80 mb-4">{media.synopsis}</p>
 
               <div className="flex flex-wrap gap-2 mb-4">
-                <Badge className="bg-[#E50914]">{media.pricing.toUpperCase()}</Badge>
                 {media.platforms.map((p) => <Badge key={p} variant="outline" className="border-white/20 text-white">{p}</Badge>)}
-                {media.pricing === "premium" ? (
-                  <Badge className={canStreamCurrent ? "bg-green-600" : "bg-yellow-600"}>
-                    {canStreamCurrent ? "UNLOCKED" : "PREMIUM LOCKED"}
-                  </Badge>
-                ) : null}
               </div>
 
-              {media.pricing === "premium" && !canStreamCurrent ? (
-                <div className="mb-4 rounded-md border border-yellow-600/40 bg-yellow-900/10 p-3 text-sm text-yellow-200">
-                  This is a premium title. Subscribe, rent, or buy to start watching instantly.
-                </div>
-              ) : null}
-
               <div className="flex flex-wrap gap-3">
-                {canStreamCurrent && !youTubeEmbedUrl ? (
-                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
-                    <a href={media.streamingUrl} target="_blank" rel="noreferrer">Stream Now</a>
-                  </Button>
-                ) : null}
-                {!canStreamCurrent ? (
-                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" asChild>
-                    <Link href="/subscription">Unlock Premium</Link>
-                  </Button>
-                ) : null}
                 <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={toggleWatchlist}>
                   {watchSaved ? "Remove from Watchlist" : "Add to Watchlist"}
-                </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("rent")}> 
-                  Rent
-                </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("buy")}> 
-                  Buy
-                </Button>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => purchase("subscription")}> 
-                  Monthly Subscription
                 </Button>
               </div>
             </div>
           </div>
+
+          {/* Below-Player Advertisement */}
+          <AdSlot type="below-player" />
 
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-6 space-y-4">
             <h2 className="text-white text-xl">Write a Review</h2>
@@ -384,9 +426,15 @@ export function WatchClient({ id }: { id: string }) {
             {reviews.length === 0 ? <p className="text-white/60">No reviews yet.</p> : reviews.map((review) => (
               <div key={review.id} className="rounded-md border border-white/10 bg-black/30 p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-white">{review.userName} <span className="text-white/60">• {review.rating}/10</span></p>
-                    <p className="text-white/70 text-sm">{new Date(review.createdAt).toLocaleString()}</p>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10 border border-white/20">
+                      <AvatarImage src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${review.userName}`} alt={review.userName} />
+                      <AvatarFallback className="bg-zinc-800 text-white">{review.userName.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-white font-medium">{review.userName} <span className="text-white/60 font-normal ml-1">• {review.rating}/10</span></p>
+                      <p className="text-white/50 text-xs mt-0.5">{new Date(review.createdAt).toLocaleString()}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {!review.isPublished && <Badge className="bg-yellow-600">Pending</Badge>}
@@ -440,39 +488,74 @@ export function WatchClient({ id }: { id: string }) {
         </div>
 
         <aside className="space-y-6">
-          <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">
-            <h3 className="text-white mb-2">Your Account</h3>
-            <p className="text-white/70 text-sm">Role: {user?.role}</p>
-            <p className="text-white/70 text-sm">Purchases: {myPurchases}</p>
-            <p className="text-white/70 text-sm">Plan: {activeSubscription ? `${activeSubscription.plan ?? "monthly"} premium` : "Free"}</p>
-          </div>
+          {/* Advertisement Slot */}
+          <AdSlot type="sidebar-rectangle" />
 
           <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">
-            <h3 className="text-white mb-3">Related Titles</h3>
-            <div className="grid gap-3">
-              {related.map((item) => (
-                <Link key={item.id} href={`/watch/${item.id}`}>
-                  <VideoCard
-                    id={item.id}
-                    title={item.title}
-                    thumbnail={item.poster}
-                    duration={item.duration}
-                    rating={item.avgRating}
-                    year={String(item.releaseYear)}
-                    category={item.genres[0]}
-                  />
-                </Link>
-              ))}
-            </div>
+            <Tabs defaultValue="related" className="w-full">
+              <TabsList className="w-full bg-black/50 border border-white/5 p-1 mb-4 h-auto rounded-lg">
+                <TabsTrigger value="related" className="flex-1 rounded-md text-sm py-1.5 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-white/60">Up Next</TabsTrigger>
+                <TabsTrigger value="popular" className="flex-1 rounded-md text-sm py-1.5 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-white/60">Popular</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="related" className="mt-0 outline-none">
+                <div className="grid gap-3">
+                  {related.length === 0 ? (
+                    <p className="text-white/50 text-sm text-center py-4">No related titles found.</p>
+                  ) : (
+                    related.map((item) => (
+                      <Link key={item.id} href={`/watch/${item.id}`} className="flex gap-3 group rounded-md p-2 -mx-2 hover:bg-white/5 transition-colors">
+                        <div className="w-28 h-16 rounded overflow-hidden shrink-0 relative bg-black">
+                          <ImageWithFallback src={item.poster} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <div className="absolute bottom-1 right-1 bg-black/80 px-1 text-[10px] text-white rounded">
+                            {item.duration}
+                          </div>
+                        </div>
+                        <div className="flex flex-col py-0.5 justify-between flex-1 min-w-0">
+                          <h4 className="text-white text-sm font-medium leading-tight line-clamp-2 group-hover:text-[#E50914] transition-colors">{item.title}</h4>
+                          <div className="flex items-center text-xs text-white/50 gap-2">
+                            <span>{item.releaseYear}</span>
+                            <span>•</span>
+                            <span className="flex items-center"><ThumbsUp className="w-3 h-3 mr-1" /> {item.avgRating}/10</span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="popular" className="mt-0 outline-none">
+                <div className="grid gap-3">
+                  {popular.length === 0 ? (
+                    <p className="text-white/50 text-sm text-center py-4">No popular titles found.</p>
+                  ) : (
+                    popular.map((item) => (
+                      <Link key={item.id} href={`/watch/${item.id}`} className="flex gap-3 group rounded-md p-2 -mx-2 hover:bg-white/5 transition-colors">
+                        <div className="w-28 h-16 rounded overflow-hidden shrink-0 relative bg-black">
+                          <ImageWithFallback src={item.poster} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <div className="absolute bottom-1 right-1 bg-black/80 px-1 text-[10px] text-white rounded">
+                            {item.duration}
+                          </div>
+                        </div>
+                        <div className="flex flex-col py-0.5 justify-between flex-1 min-w-0">
+                          <h4 className="text-white text-sm font-medium leading-tight line-clamp-2 group-hover:text-[#E50914] transition-colors">{item.title}</h4>
+                          <div className="flex items-center text-xs text-white/50 gap-2">
+                            <span className="truncate">{item.genres?.[0] || "Featured"}</span>
+                            <span>•</span>
+                            <span className="flex items-center"><ThumbsUp className="w-3 h-3 mr-1 text-[#E50914]" /> {item.avgRating}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-zinc-900 p-4">
-            <h3 className="text-white mb-2 flex items-center gap-2"><ShoppingCart className="w-4 h-4" />Integration Ready</h3>
-            <p className="text-white/60 text-sm">
-              This page uses a service abstraction; switch to real backend by setting NEXT_PUBLIC_USE_REMOTE_API=true and implementing API endpoints.
-            </p>
-          </div>
         </aside>
+
       </div>
     </div>
   );

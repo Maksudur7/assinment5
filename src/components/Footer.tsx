@@ -50,15 +50,13 @@ export function Footer() {
               <li><Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link></li>
               <li><Link href="/watchlist" className="hover:text-foreground transition-colors">Watchlist</Link></li>
               <li><Link href="/profile" className="hover:text-foreground transition-colors">Profile</Link></li>
-              <li><Link href="/purchases" className="hover:text-foreground transition-colors">Purchase History</Link></li>
               <li><a href="/about" className="hover:text-foreground transition-colors">About NGV</a></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-foreground mb-4">Help & Plans</h3>
+            <h3 className="text-foreground mb-4">Help</h3>
             <ul className="space-y-2 text-muted-foreground">
-              <li><Link href="/subscription" className="hover:text-foreground transition-colors">Subscription Plans</Link></li>
               <li><Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link></li>
               <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
               <li><Link href="/api-spec" className="hover:text-foreground transition-colors">API Contract</Link></li>

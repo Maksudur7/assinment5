@@ -3,7 +3,6 @@ import { portalService } from "../portal";
 import { setAuthToken, setStoredUser } from "../portal/storage";
 import {
   MediaQuery,
-  PurchaseType,
   SocialProvider,
   UserRole,
 } from "../portal/types";
@@ -16,8 +15,6 @@ function toPortalRole(user: Record<string, unknown>): UserRole {
 export const authFetchers = {
   async me() {
     const sessionData = await portalService.getCurrentUser();
-
-    console.log("my data ", sessionData);
 
     if (!sessionData || !sessionData.user) {
       throw new Error("Failed to fetch current user");
@@ -49,20 +46,13 @@ export const authFetchers = {
       (res as any).session?.token ||
       (res as any).accessToken ||
       (res as any).jwt;
-    console.log("[DEBUG] sessionToken:", sessionToken);
+
     if (sessionToken) {
       setAuthToken(sessionToken);
-      console.log("[DEBUG] setAuthToken called with:", sessionToken);
     }
 
     if (res.user) {
       setStoredUser({
-        id: res.user.id,
-        name: res.user.name,
-        email: res.user.email,
-        role: (res.user as any).role || "user",
-      });
-      console.log("[DEBUG] setStoredUser called with:", {
         id: res.user.id,
         name: res.user.name,
         email: res.user.email,
@@ -90,20 +80,13 @@ export const authFetchers = {
       (res as any).session?.token ||
       (res as any).accessToken ||
       (res as any).jwt;
-    console.log("[DEBUG] sessionToken:", sessionToken);
+
     if (sessionToken) {
       setAuthToken(sessionToken);
-      console.log("[DEBUG] setAuthToken called with:", sessionToken);
     }
 
     if (res.user) {
       setStoredUser({
-        id: res.user.id,
-        name: res.user.name,
-        email: res.user.email,
-        role: (res.user as any).role || "user",
-      });
-      console.log("[DEBUG] setStoredUser called with:", {
         id: res.user.id,
         name: res.user.name,
         email: res.user.email,
@@ -190,13 +173,7 @@ export const reviewFetchers = {
   comments: (reviewId: string) => portalService.getComments(reviewId),
 };
 
-export const paymentFetchers = {
-  create: (type: PurchaseType, mediaId?: string, payment?: any) =>
-    portalService.createPurchase(type, mediaId || "", payment ?? undefined),
-  history: () => portalService.getPurchaseHistory(),
-  all: () => portalService.getAllPurchases(),
-  revoke: (purchaseId: string) => portalService.revokePurchase(purchaseId),
-};
+
 
 export const watchlistFetchers = {
   list: () => portalService.getWatchlist(),
@@ -218,6 +195,15 @@ export const adminFetchers = {
   removeComment: (commentId: string) => portalService.removeComment(commentId),
 };
 
+export const adminLandingFetchers = {
+  createHighlight: portalService.createLandingHighlight.bind(portalService),
+  deleteHighlight: portalService.deleteLandingHighlight.bind(portalService),
+  createTestimonial: portalService.createLandingTestimonial.bind(portalService),
+  deleteTestimonial: portalService.deleteLandingTestimonial.bind(portalService),
+  createFaq: portalService.createLandingFaq.bind(portalService),
+  deleteFaq: portalService.deleteLandingFaq.bind(portalService),
+};
+
 export const homeFetchers = {
   getTrending: () =>
     portalService
@@ -236,6 +222,9 @@ export const homeFetchers = {
 
   getRecommendations: () =>
     portalService.getMedia({ pageSize: 12 }).then((r: any) => r.items || []),
+
+  getLandingContent: () =>
+    portalService.getLandingContent().then((r: any) => r.data),
 };
 
 export const dashboardFetchers = {

@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { VideoCard } from "@/src/components/VideoCard";
+import { AdSlot } from "@/src/components/AdSlot";
 import { Badge } from "@/src/components/ui/badge";
 import { Input } from "@/src/components/ui/input";
 import {
@@ -16,8 +17,8 @@ import {
 } from "@/src/components/ui/select";
 import { mediaFetchers } from "@/src/lib/fetchers/core";
 import { portalService } from "@/src/lib/portal";
-import { canAccessMedia } from "@/src/lib/portal/entitlements";
-import type { MediaItem, PurchaseRecord, UserRole } from "@/src/lib/portal/types";
+import type { MediaItem, UserRole } from "@/src/lib/portal/types";
+import { useDebounce } from "@/src/hooks/use-debounce";
 
 const PAGE_SIZE = 8;
 
@@ -29,6 +30,7 @@ export default function LibraryPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [genre, setGenre] = useState("all");
   const [platform, setPlatform] = useState("all");
   const [releaseYear, setReleaseYear] = useState("all");
@@ -37,17 +39,16 @@ export default function LibraryPage() {
   const [popularity, setPopularity] = useState("all");
   const [sort, setSort] = useState<"latest" | "highest-rated" | "most-reviewed">("latest");
   const [userRole, setUserRole] = useState<UserRole>("user");
-  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [result, me, purchases] = await Promise.all([
+      const [result, me] = await Promise.all([
         mediaFetchers.list({
           page,
           pageSize: PAGE_SIZE,
-          search,
+          search: debouncedSearch,
           genre: genre === "all" ? undefined : genre,
           platform: platform === "all" ? undefined : platform,
           releaseYear: releaseYear === "all" ? undefined : Number(releaseYear),
@@ -57,13 +58,11 @@ export default function LibraryPage() {
           sort,
         }),
         portalService.getCurrentUser(),
-        portalService.getPurchaseHistory(),
       ]);
       const paginated = result as import("@/src/lib/portal/types").Paginated<import("@/src/lib/portal/types").MediaItem>;
       setItems(paginated.items);
       setTotal(paginated.total);
       setUserRole(me?.role ?? "user");
-      setPurchaseHistory(purchases as import("@/src/lib/portal/types").PurchaseRecord[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load media library");
       setItems([]);
@@ -71,7 +70,7 @@ export default function LibraryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, genre, platform, releaseYear, minRating, maxRating, popularity, sort]);
+  }, [page, debouncedSearch, genre, platform, releaseYear, minRating, maxRating, popularity, sort]);
 
   useEffect(() => {
     void load();
@@ -158,6 +157,9 @@ export default function LibraryPage() {
           </Select>
         </div>
 
+        {/* Top Banner Advertisement */}
+        <AdSlot type="banner-horizontal" className="w-full" />
+
         <div className="flex items-center justify-between">
           <Badge className="bg-primary text-primary-foreground">{total} titles</Badge>
           <p className="text-muted-foreground text-sm">Page {page} of {totalPages}</p>
@@ -191,9 +193,8 @@ export default function LibraryPage() {
                 duration={item.duration}
                 rating={item.avgRating}
                 year={String(item.releaseYear)}
-                category={item.genres[0]}
-                pricing={item.pricing}
-                isLocked={item.pricing === "premium" ? !canAccessMedia(item, userRole, purchaseHistory) : false}
+                category={item.genres?.[0] || "Uncategorized"}
+
                 onClick={() => router.push(`/watch/${item.id}`)}
               />
             ))}
@@ -215,6 +216,11 @@ export default function LibraryPage() {
           >
             Next
           </button>
+        </div>
+
+        {/* Bottom Banner Advertisement */}
+        <div className="pt-8 pb-4">
+          <AdSlot type="banner-horizontal" className="w-full" />
         </div>
       </div>
     </div>

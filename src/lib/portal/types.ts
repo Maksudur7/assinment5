@@ -135,3 +135,33 @@ export type Paginated<T> = {
   total: number;
   totalPages: number;
 };
+
+export type LandingHighlight = {
+  id: string;
+  title: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LandingTestimonial = {
+  id: string;
+  name: string;
+  quote: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LandingFaq = {
+  id: string;
+  question: string;
+  answer: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LandingContent = {
+  highlights: LandingHighlight[];
+  testimonials: LandingTestimonial[];
+  faqs: LandingFaq[];
+};

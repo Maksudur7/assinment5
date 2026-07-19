@@ -16,16 +16,27 @@ import {
   getStoredUser,
 } from "./storage";
 import { authClient } from "../auth-client";
+import { triggerGlobalError } from "../events";
 
 // Helper: On 401/403, auto-logout and clear token/user, then optionally run a callback (e.g. show login modal)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function handleAuthError(err: any, onLogout?: () => void) {
+function handleAuthError(err: any, onLogout?: () => void, isSilentCheck = false) {
   if (err?.message?.includes("401") || err?.message?.includes("403")) {
     setAuthToken("");
     setStoredUser(null);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("ngv-portal-store-v2");
     }
+    
+    // Show a popup if it's not a silent background check (like getSessionUser on load)
+    if (typeof window !== "undefined" && !isSilentCheck) {
+      triggerGlobalError({
+        title: "Authentication Required",
+        message: "You need to be logged in to access this feature. Please sign in to continue.",
+        action: "login"
+      });
+    }
+    
     if (onLogout) onLogout();
   }
 }
@@ -34,6 +45,7 @@ async function call<T>(
   path: string,
   init?: RequestInit,
   onLogout?: () => void,
+  isSilentCheck = false,
 ): Promise<T> {
   const token = getAuthToken();
   const API_URL =
@@ -52,10 +64,52 @@ async function call<T>(
 
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) {
-      handleAuthError({ message: `${res.status}` }, onLogout);
+      handleAuthError({ message: `${res.status}` }, onLogout, isSilentCheck);
       throw new Error(`Unauthorized (${res.status})`);
     }
-    throw new Error(`API Error: ${res.status}`);
+    
+    let errorMsg = `API Error: ${res.status}`;
+    let displayMsg = "";
+
+    try {
+      const errorBody = await res.json();
+      if (errorBody && errorBody.message) {
+        errorMsg = `API Error: ${res.status} - ${errorBody.message}`;
+        displayMsg = errorBody.message;
+      }
+    } catch (e) {
+      // Ignore if body isn't JSON
+    }
+
+    if (typeof window !== "undefined" && !isSilentCheck) {
+      if (res.status === 404) {
+        triggerGlobalError({
+          title: "Not Found",
+          message: "The requested resource was not found or may have been removed.",
+          action: "dismiss"
+        });
+      } else if (res.status >= 500) {
+        triggerGlobalError({
+          title: "Server Error",
+          message: "We're having trouble connecting to our servers. Please try again later.",
+          action: "dismiss"
+        });
+      } else if (displayMsg) {
+        triggerGlobalError({
+          title: "Error",
+          message: displayMsg,
+          action: "dismiss"
+        });
+      } else {
+        triggerGlobalError({
+          title: "Unexpected Error",
+          message: "An unexpected error occurred while communicating with the server.",
+          action: "dismiss"
+        });
+      }
+    }
+
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -76,6 +130,7 @@ export const httpPortalService = {
         "/auth/get-session",
         undefined,
         onLogout,
+        true // isSilentCheck
       );
       if (user && typeof user === "object" && user.email) {
         if (process.env.NODE_ENV === "development") {
@@ -85,7 +140,7 @@ export const httpPortalService = {
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      handleAuthError(err, onLogout);
+      handleAuthError(err, onLogout, true);
       if (process.env.NODE_ENV === "development") {
         console.warn("[getSessionUser] Backend failed:", err?.message || err);
       }
@@ -122,10 +177,10 @@ export const httpPortalService = {
     onLogout?: () => void,
   ): Promise<PortalUser | null> {
     try {
-      return await call<PortalUser>("/users/me", undefined, onLogout);
+      return await call<PortalUser>("/users/me", undefined, onLogout, true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      handleAuthError(err, onLogout);
+      handleAuthError(err, onLogout, true);
       try {
         const localUser = getStoredUser();
         if (localUser) {
@@ -147,40 +202,26 @@ export const httpPortalService = {
       body: JSON.stringify({ role }),
     }),
   async login(email: string, password: string) {
-    // 1. Better Auth request pathachche
     const res = await authClient.signIn.email({
       email,
       password,
       callbackURL: "/",
     });
 
-    console.log("[DEBUG] login response:", res);
-
     if (!res) throw new Error("Login failed");
 
-    // 2. Token extraction logic update (Backend theke asha token khuje ber kora)
-    // res.data thakle setar bhetore check korbe, na thakle direct res-e check korbe
     const resultData = (res as { data?: unknown })?.data ?? res;
 
-    // Try to extract possible token fields (loose type, backend may change shape)
     const sessionToken =
       (resultData as Record<string, unknown>)?.token ||
       ((resultData as Record<string, unknown>)?.session as Record<string, unknown> | undefined)?.token ||
       (res as Record<string, unknown>)?.accessToken ||
       (res as Record<string, unknown>)?.jwt;
 
-    console.log("[DEBUG] sessionToken found:", sessionToken);
-
     if (sessionToken) {
       setAuthToken(sessionToken as string);
-      console.log("[DEBUG] setAuthToken called with:", sessionToken);
-    } else {
-      console.warn(
-        "[DEBUG] NO TOKEN FOUND in response! Check backend controller.",
-      );
     }
 
-    // 3. User info save kora
     const user = ((resultData as Record<string, unknown>)?.user ?? (res as Record<string, unknown>)?.user) as {
       id: string;
       name: string;
@@ -207,11 +248,8 @@ export const httpPortalService = {
       callbackURL: "/",
     });
 
-    console.log("[DEBUG] register response:", res);
-
     if (!res) throw new Error("Signup failed");
 
-    // Login-er motoi same logic
     const resultData = (res as { data?: unknown })?.data ?? res;
 
     const sessionToken =
@@ -279,7 +317,8 @@ export const httpPortalService = {
       body: JSON.stringify(input),
     }),
   deleteMedia: (id: string) => call(`/media/${id}`, { method: "DELETE" }),
-  getReviews: (mediaId: string) => call(`/media/${mediaId}/reviews`),
+  getReviews: (mediaId: string, includePending = false) => 
+    call(`/media/${mediaId}/reviews${includePending ? "?includePending=true" : ""}`),
   createReview: (input: Record<string, unknown>) =>
     call(`/media/${input.mediaId}/reviews`, {
       method: "POST",
@@ -306,17 +345,9 @@ export const httpPortalService = {
   toggleWatchlist: (mediaId: string) =>
     call(`/watchlist/${mediaId}`, { method: "POST" }),
   getWatchlist: () => call("/watchlist"),
-  createPurchase: (
-    type: string,
-    mediaId: string,
-    payment: Record<string, unknown>,
-  ) =>
-    call("/purchases", {
-      method: "POST",
-      body: JSON.stringify({ type, mediaId, payment }),
-    }),
-  getPurchaseHistory: () => call("/purchases/history"),
-  getAllPurchases: () => call("/purchases"),
+  getWatchHistory: () => call("/users/me/watch-history"),
+  addToHistory: (mediaId: string) => call(`/watchlist/history/${mediaId}`, { method: "POST" }),
+
   getPendingReviews: () => call("/admin/reviews/pending"),
   approveReview: (reviewId: string) =>
     call(`/admin/reviews/${reviewId}/approve`, {
@@ -336,10 +367,7 @@ export const httpPortalService = {
     call(`/admin/comments/${commentId}`, {
       method: "DELETE",
     }),
-  revokePurchase: (purchaseId: string) =>
-    call(`/purchases/${purchaseId}/revoke`, {
-      method: "POST",
-    }),
+
   unpublishReview: (reviewId: string) =>
     call(`/admin/reviews/${reviewId}/unpublish`, {
       method: "POST",
@@ -348,4 +376,26 @@ export const httpPortalService = {
     call(`/admin/reviews/${reviewId}`, {
       method: "DELETE",
     }),
+  getLandingContent: () => call("/landing"),
+  createLandingHighlight: (title: string, text: string) =>
+    call("/landing/highlights", {
+      method: "POST",
+      body: JSON.stringify({ title, text }),
+    }).then((res: any) => res.data),
+  deleteLandingHighlight: (id: string) =>
+    call(`/landing/highlights/${id}`, { method: "DELETE" }),
+  createLandingTestimonial: (name: string, quote: string) =>
+    call("/landing/testimonials", {
+      method: "POST",
+      body: JSON.stringify({ name, quote }),
+    }).then((res: any) => res.data),
+  deleteLandingTestimonial: (id: string) =>
+    call(`/landing/testimonials/${id}`, { method: "DELETE" }),
+  createLandingFaq: (question: string, answer: string) =>
+    call("/landing/faqs", {
+      method: "POST",
+      body: JSON.stringify({ question, answer }),
+    }).then((res: any) => res.data),
+  deleteLandingFaq: (id: string) =>
+    call(`/landing/faqs/${id}`, { method: "DELETE" }),
 };

@@ -5,12 +5,13 @@ import type {
   MediaQuery,
   Paginated,
   PortalUser,
-  PurchaseRecord,
-  PurchaseType,
-  PaymentInput,
   Review,
   ReviewComment,
   SocialProvider,
+  LandingContent,
+  LandingHighlight,
+  LandingTestimonial,
+  LandingFaq,
 } from "./types";
 
 export type CreateReviewInput = {
@@ -53,10 +54,6 @@ export interface PortalService {
   toggleWatchlist(mediaId: string): Promise<{ saved: boolean }>;
   getWatchlist(): Promise<MediaItem[]>;
 
-  createPurchase(type: PurchaseType, mediaId?: string, payment?: PaymentInput): Promise<PurchaseRecord>;
-  getPurchaseHistory(): Promise<PurchaseRecord[]>;
-  getAllPurchases(): Promise<PurchaseRecord[]>;
-  revokePurchase(purchaseId: string): Promise<PurchaseRecord>;
 
   getPendingReviews(): Promise<Review[]>;
   approveReview(reviewId: string): Promise<Review>;
@@ -64,4 +61,12 @@ export interface PortalService {
   removeReview(reviewId: string): Promise<void>;
 
   getAdminOverview(): Promise<AdminOverview>;
+
+  getLandingContent(): Promise<{ success: boolean; data: LandingContent }>;
+  createLandingHighlight(title: string, text: string): Promise<LandingHighlight>;
+  deleteLandingHighlight(id: string): Promise<void>;
+  createLandingTestimonial(name: string, quote: string): Promise<LandingTestimonial>;
+  deleteLandingTestimonial(id: string): Promise<void>;
+  createLandingFaq(question: string, answer: string): Promise<LandingFaq>;
+  deleteLandingFaq(id: string): Promise<void>;
 }

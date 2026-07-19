@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User, Wallet } from "lucide-react";
+import { User, Wallet, History } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/src/components/ui/badge";
+import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
@@ -15,7 +17,7 @@ import type { PortalUser } from "@/src/lib/portal/types";
 export default function ProfilePage() {
   const [user, setUser] = useState<PortalUser | null>(null);
   const [watchlistCount, setWatchlistCount] = useState(0);
-  const [purchaseCount, setPurchaseCount] = useState(0);
+  const [watchHistory, setWatchHistory] = useState<any[]>([]);
   const [error, setError] = useState("");
   const [editableName, setEditableName] = useState("");
   const [editableEmail, setEditableEmail] = useState("");
@@ -25,16 +27,16 @@ export default function ProfilePage() {
   async function load() {
     setError("");
     try {
-      const [u, w, p] = await Promise.all([
+      const [u, w, h] = await Promise.all([
         portalService.getCurrentUser(),
         portalService.getWatchlist(),
-        portalService.getPurchaseHistory(),
+        portalService.getWatchHistory(),
       ]);
       setUser(u);
       setEditableName(u?.name ?? "");
       setEditableEmail(u?.email ?? "");
       setWatchlistCount((w as import("@/src/lib/portal/types").MediaItem[]).length);
-      setPurchaseCount((p as import("@/src/lib/portal/types").PurchaseRecord[]).length);
+      setWatchHistory(Array.isArray(h) ? h : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load profile data");
     }
@@ -121,10 +123,38 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent className="space-y-2 text-foreground/80">
               <p>Watchlist: <span className="text-foreground">{watchlistCount}</span></p>
-              <p>Purchases: <span className="text-foreground">{purchaseCount}</span></p>
             </CardContent>
           </Card>
         </div>
+
+        <Card className="bg-card border-border mt-6">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <History className="w-5 h-5 text-primary" /> Watch History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {watchHistory.length === 0 ? (
+              <p className="text-muted-foreground">No watch history available.</p>
+            ) : (
+              <div className="space-y-4">
+                {watchHistory.map((item) => (
+                  <Link key={item.mediaId} href={`/watch/${item.mediaId}`} className="flex gap-4 group p-2 hover:bg-white/5 rounded-lg transition-colors border border-transparent hover:border-white/10">
+                    <div className="w-40 h-24 shrink-0 rounded overflow-hidden relative bg-black">
+                      <ImageWithFallback src={item.poster} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                    <div className="flex flex-col justify-start flex-1 py-1">
+                      <h4 className="text-foreground text-lg font-medium leading-tight group-hover:text-primary transition-colors line-clamp-2 mb-1">{item.title}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Watched on {new Date(item.watchedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
