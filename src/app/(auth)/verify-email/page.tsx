@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Film, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { authClient } from "@/src/lib/auth-client";
+import { Suspense } from "react";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   
@@ -22,8 +23,8 @@ export default function VerifyEmailPage() {
 
     async function verify() {
       try {
-        const res = await authClient.verifyEmail({ query: { token: token! } });
-        if (res.error) {
+        const res: any = await authClient.verifyEmail({ query: { token: token! } });
+        if (res?.error) {
           setStatus("error");
           setMessage(res.error.message || "Failed to verify email.");
         } else {
@@ -102,5 +103,13 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

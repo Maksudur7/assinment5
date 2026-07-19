@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, Loader } from "lucide-react";
@@ -19,7 +19,7 @@ async function fetchSearch(q: string): Promise<MediaItem[]> {
   return res.json();
 }
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") || "";
 
@@ -122,5 +122,13 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background pt-24 px-6 pb-16" />}>
+      <SearchContent />
+    </Suspense>
   );
 }

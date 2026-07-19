@@ -173,7 +173,7 @@ export function WatchClient({ id }: { id: string }) {
     const isHls = media.streamingUrl.endsWith(".m3u8");
 
     // Load progress
-    portalService.getWatchProgress(media.id).then((progress) => {
+    (portalService as any).getWatchProgress(media.id).then((progress: any) => {
       if (progress && progress.progressSeconds > 0) {
         video.currentTime = progress.progressSeconds;
       }
@@ -191,7 +191,7 @@ export function WatchClient({ id }: { id: string }) {
       const currentTime = Math.floor(video.currentTime);
       if (currentTime > 0 && currentTime - lastSavedTime >= 10) {
         setLastSavedTime(currentTime);
-        portalService.updateWatchProgress(media.id, currentTime).catch(console.error);
+        (portalService as any).updateWatchProgress(media.id, currentTime).catch(console.error);
       }
     };
 

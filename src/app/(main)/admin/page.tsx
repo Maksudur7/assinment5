@@ -66,7 +66,7 @@ export default function AdminPage() {
       portalService.getAdminOverview() as Promise<AdminOverview>,
       portalService.getPendingReviews() as Promise<Review[]>,
       portalService.getPendingComments() as Promise<ReviewComment[]>,
-      portalService.getLandingContent().catch(() => ({ success: false, data: { highlights: [], testimonials: [], faqs: [] } })),
+      portalService.getLandingContent().catch(() => ({ success: false, data: { highlights: [], testimonials: [], faqs: [] } })) as Promise<any>,
     ]);
 
     setUser(me);
@@ -111,10 +111,10 @@ export default function AdminPage() {
 
     try {
       if (editingId) {
-        await portalService.updateMedia(editingId, payload);
+        await portalService.updateMedia(editingId, payload as any);
         setMessage("Media updated successfully.");
       } else {
-        await portalService.createMedia(payload);
+        await portalService.createMedia(payload as any);
         setMessage("Media created successfully.");
       }
       setEditingId(null);

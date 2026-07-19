@@ -62,7 +62,7 @@ export function Navbar() {
         setIsSearching(true);
         searchDebounceRef.current = setTimeout(async () => {
           try {
-            const results = await portalService.searchMedia(val.trim());
+            const results = await (portalService as any).searchMedia(val.trim());
             setLiveResults(results.slice(0, 5));
           } catch (error) {
             console.error(error);
