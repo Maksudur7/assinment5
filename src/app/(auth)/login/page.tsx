@@ -8,11 +8,15 @@ import { triggerGlobalError } from "@/src/lib/events";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+
   const [email, setEmail] = useState(""); 
+
   const [password, setPassword] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
   const [demoMenuOpen, setDemoMenuOpen] = useState(false);
+
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
