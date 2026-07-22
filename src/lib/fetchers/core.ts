@@ -98,10 +98,14 @@ export const authFetchers = {
   },
 
   async socialLogin(provider: SocialProvider) {
+    const callbackURL = typeof window !== "undefined"
+      ? `${window.location.origin}/`
+      : "/";
+
     // Directly return result, not { data, error }
     const res = await authClient.signIn.social({
       provider,
-      callbackURL: "/",
+      callbackURL,
     });
 
     // Better Auth will automatically throw error if any (since throw: true)
