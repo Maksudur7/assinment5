@@ -13,9 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/ta
 import { Textarea } from "@/src/components/ui/textarea";
 import { portalService } from "@/src/lib/portal";
 import { getStoredUser } from "@/src/lib/portal/storage";
-import { authClient } from "@/src/lib/auth-client";
 import { adminLandingFetchers } from "@/src/lib/fetchers/core";
 import type { AdminOverview, MediaItem, PortalUser, Review, ReviewComment, LandingContent, LandingHighlight, LandingTestimonial, LandingFaq } from "@/src/lib/portal/types";
+import { NGVActionOverlay } from "@/src/components/ui/NGVLoader";
 
 const EMPTY_FORM = {
   title: "",
@@ -44,13 +44,14 @@ export default function AdminPage() {
   const [mediaSearch, setMediaSearch] = useState("");
   const [mediaPage, setMediaPage] = useState(1);
   const [mediaTotalPages, setMediaTotalPages] = useState(1);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Landing CMS state
   const [highlights, setHighlights] = useState<LandingHighlight[]>([]);
   const [testimonials, setTestimonials] = useState<LandingTestimonial[]>([]);
   const [faqs, setFaqs] = useState<LandingFaq[]>([]);
   const [landingMessage, setLandingMessage] = useState("");
-  
+
   // Landing Form states
   const [highlightForm, setHighlightForm] = useState({ title: "", text: "" });
   const [testimonialForm, setTestimonialForm] = useState({ name: "", quote: "" });
@@ -72,7 +73,7 @@ export default function AdminPage() {
     try {
       const me = await portalService.getCurrentUser().catch(() => null);
       const stored = getStoredUser();
-      
+
       const currentUser = me || (stored ? {
         id: stored.id,
         name: stored.name,
@@ -98,7 +99,7 @@ export default function AdminPage() {
         setPendingReviews(reviews || []);
         setPendingComments(comments || []);
         setCategories(cats || []);
-        
+
         if (landingRes?.data) {
           setHighlights(landingRes.data.highlights || []);
           setTestimonials(landingRes.data.testimonials || []);
@@ -112,6 +113,7 @@ export default function AdminPage() {
 
   async function handleAddCategory() {
     if (!categoryNameInput.trim()) return;
+    setActionLoading("Creating category...");
     try {
       await (portalService as any).createCategory(categoryNameInput.trim(), categoryIconInput.trim());
       setCategoryNameInput("");
@@ -120,10 +122,13 @@ export default function AdminPage() {
       setLandingMessage("Category created successfully.");
     } catch (err) {
       setLandingMessage(err instanceof Error ? err.message : "Error creating category");
+    } finally {
+      setActionLoading(null);
     }
   }
 
   async function handleDeleteCategory(id: string) {
+    setActionLoading("Deleting category...");
     try {
       await (portalService as any).deleteCategory(id);
       const updatedCats = await (portalService as any).getCategories();
@@ -131,6 +136,8 @@ export default function AdminPage() {
       setLandingMessage("Category deleted successfully.");
     } catch (err) {
       setLandingMessage(err instanceof Error ? err.message : "Error deleting category");
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -168,6 +175,7 @@ export default function AdminPage() {
       duration: form.duration.trim(),
     };
 
+    setActionLoading(editingId ? "Updating media item..." : "Creating media item...");
     try {
       if (editingId) {
         await portalService.updateMedia(editingId, payload as any);
@@ -183,6 +191,8 @@ export default function AdminPage() {
       await loadMedia(mediaPage, mediaSearch);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to save media");
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -205,44 +215,82 @@ export default function AdminPage() {
   }
 
   async function removeMedia(id: string) {
-    await portalService.deleteMedia(id);
-    await load();
-    await loadMedia(mediaPage, mediaSearch);
+    setActionLoading("Deleting media item...");
+    try {
+      await portalService.deleteMedia(id);
+      await load();
+      await loadMedia(mediaPage, mediaSearch);
+    } catch (err) {
+      console.error("Error deleting media:", err);
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function approveReview(id: string) {
-    await portalService.approveReview(id);
-    await load();
+    setActionLoading("Approving review...");
+    try {
+      await portalService.approveReview(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function unpublishReview(id: string) {
-    await portalService.unpublishReview(id);
-    await load();
+    setActionLoading("Unpublishing review...");
+    try {
+      await portalService.unpublishReview(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function removeReview(id: string) {
-    await portalService.removeReview(id);
-    await load();
+    setActionLoading("Deleting review...");
+    try {
+      await portalService.removeReview(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function approveComment(id: string) {
-    await portalService.approveComment(id);
-    await load();
+    setActionLoading("Approving comment...");
+    try {
+      await portalService.approveComment(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function unpublishComment(id: string) {
-    await portalService.unpublishComment(id);
-    await load();
+    setActionLoading("Hiding comment...");
+    try {
+      await portalService.unpublishComment(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function removeComment(id: string) {
-    await portalService.removeComment(id);
-    await load();
+    setActionLoading("Deleting comment...");
+    try {
+      await portalService.removeComment(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   // Landing Page CMS Handlers
   async function handleAddHighlight() {
     if (!highlightForm.title || !highlightForm.text) return;
+    setActionLoading("Creating highlight...");
     try {
       await adminLandingFetchers.createHighlight(highlightForm.title, highlightForm.text);
       setHighlightForm({ title: "", text: "" });
@@ -250,15 +298,23 @@ export default function AdminPage() {
       setLandingMessage("Highlight added.");
     } catch (err) {
       setLandingMessage(err instanceof Error ? err.message : "Error adding highlight");
+    } finally {
+      setActionLoading(null);
     }
   }
   async function handleDeleteHighlight(id: string) {
-    await adminLandingFetchers.deleteHighlight(id);
-    await load();
+    setActionLoading("Deleting highlight...");
+    try {
+      await adminLandingFetchers.deleteHighlight(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function handleAddTestimonial() {
     if (!testimonialForm.name || !testimonialForm.quote) return;
+    setActionLoading("Creating testimonial...");
     try {
       await adminLandingFetchers.createTestimonial(testimonialForm.name, testimonialForm.quote);
       setTestimonialForm({ name: "", quote: "" });
@@ -266,15 +322,23 @@ export default function AdminPage() {
       setLandingMessage("Testimonial added.");
     } catch (err) {
       setLandingMessage(err instanceof Error ? err.message : "Error adding testimonial");
+    } finally {
+      setActionLoading(null);
     }
   }
   async function handleDeleteTestimonial(id: string) {
-    await adminLandingFetchers.deleteTestimonial(id);
-    await load();
+    setActionLoading("Deleting testimonial...");
+    try {
+      await adminLandingFetchers.deleteTestimonial(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function handleAddFaq() {
     if (!faqForm.question || !faqForm.answer) return;
+    setActionLoading("Creating FAQ...");
     try {
       await adminLandingFetchers.createFaq(faqForm.question, faqForm.answer);
       setFaqForm({ question: "", answer: "" });
@@ -282,11 +346,18 @@ export default function AdminPage() {
       setLandingMessage("FAQ added.");
     } catch (err) {
       setLandingMessage(err instanceof Error ? err.message : "Error adding FAQ");
+    } finally {
+      setActionLoading(null);
     }
   }
   async function handleDeleteFaq(id: string) {
-    await adminLandingFetchers.deleteFaq(id);
-    await load();
+    setActionLoading("Deleting FAQ...");
+    try {
+      await adminLandingFetchers.deleteFaq(id);
+      await load();
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   if (!user) {
@@ -308,7 +379,10 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-20 transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground pt-20 transition-colors duration-300 relative">
+      {/* NGV Netflix-Style Action Overlay Loader */}
+      {actionLoading && <NGVActionOverlay text={actionLoading} />}
+
       <div className="max-w-360 mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-white text-3xl mb-2">Admin Console</h1>
@@ -420,7 +494,9 @@ export default function AdminPage() {
                   <div><Label className="text-white">Poster URL</Label><Input className="bg-zinc-800 border-white/10 text-white" value={form.poster} onChange={(e) => setForm((p) => ({ ...p, poster: e.target.value }))} /></div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button onClick={saveMedia} className="bg-[#E50914] hover:bg-[#B2070F]">{editingId ? "Update" : "Create"}</Button>
+                  <Button onClick={saveMedia} className="bg-[#E50914] hover:bg-[#B2070F]" disabled={!!actionLoading}>
+                    {editingId ? "Update" : "Create"}
+                  </Button>
                   {editingId ? <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setSelectedCategories([]); }}>Cancel Edit</Button> : null}
                 </div>
                 {message ? <p className="text-sm text-white/70">{message}</p> : null}
@@ -455,8 +531,8 @@ export default function AdminPage() {
                         <TableCell className="text-white">{m.title}</TableCell>
                         <TableCell className="text-white/70">{m.releaseYear}</TableCell>
                         <TableCell className="space-x-2">
-                           <Button size="sm" variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => void editMedia(m)}>Edit</Button>
-                           <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" onClick={() => void removeMedia(m.id)}><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                           <Button size="sm" variant="outline" className="bg-white/5 border-white/10 text-white" disabled={!!actionLoading} onClick={() => void editMedia(m)}>Edit</Button>
+                           <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" disabled={!!actionLoading} onClick={() => void removeMedia(m.id)}><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -495,9 +571,9 @@ export default function AdminPage() {
                     <p className="text-white">{r.userName} • {r.rating}/10</p>
                     <p className="text-white/70 text-sm">{r.content}</p>
                     <div className="flex gap-2 mt-2">
-                      <Button size="sm" className="bg-green-700 hover:bg-green-600" onClick={() => void approveReview(r.id)}><UserCheck className="w-3 h-3 mr-1" />Approve</Button>
-                      <Button size="sm" variant="outline" className="bg-yellow-900/20 border-yellow-700 text-yellow-300" onClick={() => void unpublishReview(r.id)}><XCircle className="w-3 h-3 mr-1" />Unpublish</Button>
-                      <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" onClick={() => void removeReview(r.id)}><Trash2 className="w-3 h-3 mr-1" />Remove</Button>
+                      <Button size="sm" className="bg-green-700 hover:bg-green-600" disabled={!!actionLoading} onClick={() => void approveReview(r.id)}><UserCheck className="w-3 h-3 mr-1" />Approve</Button>
+                      <Button size="sm" variant="outline" className="bg-yellow-900/20 border-yellow-700 text-yellow-300" disabled={!!actionLoading} onClick={() => void unpublishReview(r.id)}><XCircle className="w-3 h-3 mr-1" />Unpublish</Button>
+                      <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" disabled={!!actionLoading} onClick={() => void removeReview(r.id)}><Trash2 className="w-3 h-3 mr-1" />Remove</Button>
                     </div>
                   </div>
                 ))}
@@ -512,9 +588,9 @@ export default function AdminPage() {
                     <p className="text-white">{c.userName}</p>
                     <p className="text-white/70 text-sm">{c.content}</p>
                     <div className="flex gap-2 mt-2">
-                      <Button size="sm" className="bg-green-700 hover:bg-green-600" onClick={() => void approveComment(c.id)}>Approve</Button>
-                      <Button size="sm" variant="outline" className="bg-yellow-900/20 border-yellow-700 text-yellow-300" onClick={() => void unpublishComment(c.id)}>Hide</Button>
-                      <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" onClick={() => void removeComment(c.id)}>Remove</Button>
+                      <Button size="sm" className="bg-green-700 hover:bg-green-600" disabled={!!actionLoading} onClick={() => void approveComment(c.id)}>Approve</Button>
+                      <Button size="sm" variant="outline" className="bg-yellow-900/20 border-yellow-700 text-yellow-300" disabled={!!actionLoading} onClick={() => void unpublishComment(c.id)}>Hide</Button>
+                      <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" disabled={!!actionLoading} onClick={() => void removeComment(c.id)}>Remove</Button>
                     </div>
                   </div>
                 ))}
@@ -542,11 +618,10 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-
           <TabsContent value="landing">
             <div className="space-y-6">
               {landingMessage && <p className="text-white/70 bg-black/30 p-2 rounded">{landingMessage}</p>}
-              
+
               <div className="grid lg:grid-cols-3 gap-6">
                 {/* Highlights CMS */}
                 <Card className="bg-zinc-900 border-white/10">
@@ -558,14 +633,14 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       <Input className="bg-zinc-800 border-white/10 text-white" placeholder="Title" value={highlightForm.title} onChange={e => setHighlightForm(p => ({...p, title: e.target.value}))} />
                       <Textarea className="bg-zinc-800 border-white/10 text-white" placeholder="Description" value={highlightForm.text} onChange={e => setHighlightForm(p => ({...p, text: e.target.value}))} />
-                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" onClick={handleAddHighlight}>Add Highlight</Button>
+                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" disabled={!!actionLoading} onClick={handleAddHighlight}>Add Highlight</Button>
                     </div>
                     <div className="space-y-2 mt-4">
                       {highlights.map(h => (
                         <div key={h.id} className="border border-white/10 p-2 rounded bg-black/30 relative">
                           <p className="text-white text-sm font-medium pr-8">{h.title}</p>
                           <p className="text-white/60 text-xs mt-1">{h.text}</p>
-                          <button onClick={() => handleDeleteHighlight(h.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                          <button disabled={!!actionLoading} onClick={() => handleDeleteHighlight(h.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}
                     </div>
@@ -582,14 +657,14 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       <Input className="bg-zinc-800 border-white/10 text-white" placeholder="Name & Location" value={testimonialForm.name} onChange={e => setTestimonialForm(p => ({...p, name: e.target.value}))} />
                       <Textarea className="bg-zinc-800 border-white/10 text-white" placeholder="Quote" value={testimonialForm.quote} onChange={e => setTestimonialForm(p => ({...p, quote: e.target.value}))} />
-                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" onClick={handleAddTestimonial}>Add Testimonial</Button>
+                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" disabled={!!actionLoading} onClick={handleAddTestimonial}>Add Testimonial</Button>
                     </div>
                     <div className="space-y-2 mt-4">
                       {testimonials.map(t => (
                         <div key={t.id} className="border border-white/10 p-2 rounded bg-black/30 relative">
                           <p className="text-white text-sm font-medium pr-8">{t.name}</p>
                           <p className="text-white/60 text-xs mt-1">{t.quote}</p>
-                          <button onClick={() => handleDeleteTestimonial(t.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                          <button disabled={!!actionLoading} onClick={() => handleDeleteTestimonial(t.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}
                     </div>
@@ -606,14 +681,14 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       <Input className="bg-zinc-800 border-white/10 text-white" placeholder="Question" value={faqForm.question} onChange={e => setFaqForm(p => ({...p, question: e.target.value}))} />
                       <Textarea className="bg-zinc-800 border-white/10 text-white" placeholder="Answer" value={faqForm.answer} onChange={e => setFaqForm(p => ({...p, answer: e.target.value}))} />
-                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" onClick={handleAddFaq}>Add FAQ</Button>
+                      <Button className="w-full bg-[#E50914] hover:bg-[#B2070F]" disabled={!!actionLoading} onClick={handleAddFaq}>Add FAQ</Button>
                     </div>
                     <div className="space-y-2 mt-4">
                       {faqs.map(f => (
                         <div key={f.id} className="border border-white/10 p-2 rounded bg-black/30 relative">
                           <p className="text-white text-sm font-medium pr-8">{f.question}</p>
                           <p className="text-white/60 text-xs mt-1">{f.answer}</p>
-                          <button onClick={() => handleDeleteFaq(f.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                          <button disabled={!!actionLoading} onClick={() => handleDeleteFaq(f.id)} className="absolute top-2 right-2 text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}
                     </div>
@@ -649,7 +724,7 @@ export default function AdminPage() {
                       onChange={(e) => setCategoryIconInput(e.target.value)}
                     />
                   </div>
-                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" onClick={handleAddCategory}>
+                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" disabled={!!actionLoading} onClick={handleAddCategory}>
                     <Plus className="w-4 h-4 mr-1" />
                     Create Category
                   </Button>
@@ -687,6 +762,7 @@ export default function AdminPage() {
                                 size="sm"
                                 variant="outline"
                                 className="bg-red-900/20 border-red-700 text-red-300 hover:bg-red-900/30"
+                                disabled={!!actionLoading}
                                 onClick={() => void handleDeleteCategory(cat.id)}
                               >
                                 <Trash2 className="w-3 h-3 mr-1" />

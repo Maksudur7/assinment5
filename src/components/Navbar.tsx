@@ -7,7 +7,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useTheme } from "next-themes";
 
 import {
-  Bell,
   Menu,
   Search,
   User,
@@ -18,6 +17,9 @@ import {
   X,
   Sun,
   Moon,
+  LogOut,
+  LogIn,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "./ui/button";
@@ -33,14 +35,16 @@ import { authClient } from "@/src/lib/auth-client";
 import { getStoredUser, clearStore, setStoredUser, setAuthToken } from "@/src/lib/portal/storage";
 import { httpPortalService } from "@/src/lib/portal/httpService";
 import { portalService } from "@/src/lib/portal";
-import type { UserRole, MediaItem } from "@/src/lib/portal/types";
+import type { MediaItem } from "@/src/lib/portal/types";
 import { cn } from "./ui/utils";
+import { NotificationCenter } from "./NotificationCenter";
+import { NGVLogo } from "./ui/NGVLoader";
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { theme, setTheme } = useTheme(); // Added
-  const [mounted, setMounted] = useState(false); // Added
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const { data: session } = authClient.useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -56,7 +60,7 @@ export function Navbar() {
       const val = e.target.value;
       setSearchQuery(val);
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-      
+
       if (val.trim().length >= 2) {
         setShowDropdown(true);
         setIsSearching(true);
@@ -90,11 +94,8 @@ export function Navbar() {
     [router, searchQuery, mobileMenuOpen],
   );
 
-
-  // Mount logic for hydration safety
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(() => true);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -159,6 +160,7 @@ export function Navbar() {
       fetchOptions: {
         onSuccess: () => {
           setUser(null);
+          setMobileMenuOpen(false);
           router.push("/login");
           router.refresh();
         },
@@ -179,12 +181,8 @@ export function Navbar() {
         <div className="flex items-center justify-between h-20">
           {/* Logo Section */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="bg-red-600 px-3 py-1.5 rounded shadow-lg group-hover:bg-red-700 transition-colors">
-              <span className="text-white font-bold tracking-tighter text-xl">
-                NGV
-              </span>
-            </div>
-            <span className="text-foreground/50 dark:text-white/50 text-xs hidden lg:block leading-tight uppercase tracking-widest">
+            <NGVLogo size="sm" />
+            <span className="text-foreground/50 dark:text-white/50 text-xs hidden lg:block leading-tight uppercase tracking-widest font-medium">
               Clean & Secure
               <br />
               Streaming
@@ -200,7 +198,7 @@ export function Navbar() {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
                   pathname === item.href
-                    ? "bg-primary text-primary-foreground dark:bg-white/10 dark:text-white"
+                    ? "bg-red-600 text-white shadow-[0_0_15px_rgba(229,9,20,0.4)]"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent dark:text-white/60 dark:hover:text-white dark:hover:bg-white/5",
                 )}
               >
@@ -211,7 +209,10 @@ export function Navbar() {
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Dynamic Notification Center */}
+            <NotificationCenter />
+
             {/* Theme Toggle Button */}
             <Button
               variant="ghost"
@@ -272,14 +273,6 @@ export function Navbar() {
               )}
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-foreground/70 dark:text-white/70 hover:text-foreground dark:hover:text-white hover:bg-accent dark:hover:bg-white/10 rounded-full"
-            >
-              <Bell className="w-5 h-5" />
-            </Button>
-
             {/* Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -320,7 +313,7 @@ export function Navbar() {
                 {isAdmin && (
                   <DropdownMenuItem
                     asChild
-                    className="text-red-500 focus:text-red-600 cursor-pointer"
+                    className="text-red-500 focus:text-red-600 cursor-pointer font-semibold"
                   >
                     <Link href="/admin">Admin Console</Link>
                   </DropdownMenuItem>
@@ -347,7 +340,7 @@ export function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-foreground/70 dark:text-white/70"
+              className="md:hidden text-foreground/70 dark:text-white/70 hover:bg-white/10 rounded-full"
               onClick={() => setMobileMenuOpen(true)}
             >
               <Menu className="w-6 h-6" />
@@ -356,53 +349,138 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Pixel-Perfect Mobile Drawer Sidebar */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-[60] md:hidden">
+          {/* Backdrop with Blur */}
           <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="fixed right-0 top-0 h-full w-72 bg-background dark:bg-zinc-950 p-6 border-l border-border dark:border-white/10 animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between mb-8 text-foreground dark:text-white">
-              <span className="font-bold text-xl">Menu</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <X className="w-6 h-6" />
-              </Button>
-            </div>
-            <nav className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 bg-accent dark:bg-white/5 rounded-xl px-4 py-2 border border-border dark:border-white/10 mb-4">
-                <Search className="w-5 h-5 text-muted-foreground dark:text-white/40" />
-                <Input
-                  placeholder="Search titles..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleSearchSubmit}
-                  className="bg-transparent border-0 text-base text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-0 h-10 w-full p-0"
-                />
+
+          {/* Sliding Glassmorphic Container */}
+          <div className="fixed right-0 top-0 h-full w-[85%] max-w-sm bg-zinc-950/95 border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.9)] backdrop-blur-2xl p-6 flex flex-col justify-between animate-in slide-in-from-right duration-300 overflow-y-auto">
+            <div className="space-y-6">
+              {/* Top Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <NGVLogo size="sm" />
+                  <span className="text-white font-extrabold tracking-wider text-base">NGV</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-zinc-400 hover:text-white rounded-full hover:bg-white/10"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <X className="w-6 h-6" />
+                </Button>
               </div>
 
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-4 p-4 rounded-xl text-lg font-medium transition-colors",
-                    pathname === item.href
-                      ? "bg-red-600 text-white"
-                      : "text-muted-foreground dark:text-white/60 hover:bg-accent dark:hover:bg-white/5",
-                  )}
+              {/* User Profile Quick Card */}
+              {currentUser ? (
+                <div className="bg-gradient-to-r from-zinc-900 to-zinc-900/50 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center text-white font-bold overflow-hidden">
+                      {currentUser.image ? (
+                        <img src={currentUser.image} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        currentUser.name?.charAt(0) || "U"
+                      )}
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-white font-bold text-sm truncate">{currentUser.name}</p>
+                      <p className="text-zinc-400 text-xs truncate">{currentUser.email}</p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border",
+                    isAdmin ? "bg-red-500/20 text-red-400 border-red-500/40" : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                  )}>
+                    {isAdmin ? "Admin" : "Member"}
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-zinc-900/60 border border-white/10 rounded-2xl p-4 text-center space-y-3">
+                  <p className="text-zinc-300 text-sm font-medium">Enjoy full access to NGV Streaming</p>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block w-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-red-600/30"
+                  >
+                    Sign In Now
+                  </Link>
+                </div>
+              )}
+
+              {/* Mobile Search Box */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 bg-zinc-900/80 rounded-xl px-3.5 py-2 border border-white/10 focus-within:border-red-500 transition-all">
+                  <Search className="w-4 h-4 text-zinc-400" />
+                  <Input
+                    placeholder="Search movies, shows..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleSearchSubmit}
+                    className="bg-transparent border-0 text-sm text-white placeholder:text-zinc-500 focus-visible:ring-0 h-8 w-full p-0"
+                  />
+                </div>
+              </div>
+
+              {/* Navigation Items */}
+              <div className="space-y-1">
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest px-2 mb-2">Menu</p>
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all",
+                        isActive
+                          ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30"
+                          : "text-zinc-300 hover:text-white hover:bg-white/5"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-zinc-400")} />
+                        {item.name}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-600" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="pt-6 border-t border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-zinc-400 font-medium">Theme Mode</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="text-xs text-white bg-white/5 hover:bg-white/10 rounded-xl px-3"
                 >
-                  <item.icon className="w-6 h-6" />
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
+                  {theme === "dark" ? <Sun className="w-4 h-4 mr-1 text-amber-400" /> : <Moon className="w-4 h-4 mr-1 text-blue-400" />}
+                  {theme === "dark" ? "Light" : "Dark"}
+                </Button>
+              </div>
+
+              {currentUser && (
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/10 justify-start gap-3 rounded-xl"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
