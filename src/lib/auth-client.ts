@@ -7,18 +7,14 @@ function normalizeAuthUrl(url: string): string {
 }
 
 const BACKEND_AUTH_URL = (() => {
-  if (typeof window === "undefined") {
-    const serverUrl = process.env.BACKEND_AUTH_URL;
-    if (serverUrl && !serverUrl.startsWith("/")) {
-      return normalizeAuthUrl(serverUrl);
-    }
-    const clientUrl = process.env.NEXT_PUBLIC_AUTH_URL || process.env.NEXT_PUBLIC_BETTER_AUTH_URL;
-    if (clientUrl && !clientUrl.startsWith("/")) {
-      return normalizeAuthUrl(clientUrl);
-    }
-    return "https://ngv-backend.vercel.app/api/auth";
+  const envUrl =
+    process.env.NEXT_PUBLIC_AUTH_URL ||
+    process.env.NEXT_PUBLIC_BETTER_AUTH_URL ||
+    process.env.BACKEND_AUTH_URL;
+  if (envUrl && envUrl.trim() !== "") {
+    return normalizeAuthUrl(envUrl);
   }
-  return "/api/auth";
+  return "https://ngv-backend.vercel.app/api/auth";
 })();
 
 export const authClient = createAuthClient({

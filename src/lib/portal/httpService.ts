@@ -49,18 +49,11 @@ async function call<T>(
 ): Promise<T> {
   const token = getAuthToken();
   const API_URL = (() => {
-    if (typeof window === "undefined") {
-      const serverUrl = process.env.BACKEND_API_URL;
-      if (serverUrl && !serverUrl.startsWith("/")) {
-        return serverUrl;
-      }
-      const clientUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (clientUrl && !clientUrl.startsWith("/")) {
-        return clientUrl;
-      }
-      return "https://ngv-backend.vercel.app/api";
+    const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_API_URL;
+    if (envUrl && envUrl.trim() !== "") {
+      return envUrl.replace(/\/+$/, "");
     }
-    return "/api";
+    return "https://ngv-backend.vercel.app/api";
   })();
 
   // Ensure no double slash in URL
