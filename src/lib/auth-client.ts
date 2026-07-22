@@ -6,11 +6,16 @@ function normalizeAuthUrl(url: string): string {
   return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
 }
 
-const BACKEND_AUTH_URL = normalizeAuthUrl(
-  process.env.NEXT_PUBLIC_AUTH_URL ||
+const BACKEND_AUTH_URL = (() => {
+  const envUrl =
+    process.env.NEXT_PUBLIC_AUTH_URL ||
     process.env.NEXT_PUBLIC_BETTER_AUTH_URL ||
-    "https://ngv-backend.vercel.app/api/auth",
-);
+    process.env.BACKEND_AUTH_URL;
+  if (envUrl && envUrl.trim() !== "") {
+    return normalizeAuthUrl(envUrl);
+  }
+  return "https://ngv-backend.vercel.app/api/auth";
+})();
 
 export const authClient = createAuthClient({
   baseURL: BACKEND_AUTH_URL,

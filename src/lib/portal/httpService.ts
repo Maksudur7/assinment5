@@ -48,8 +48,13 @@ async function call<T>(
   isSilentCheck = false,
 ): Promise<T> {
   const token = getAuthToken();
-  const API_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  const API_URL = (() => {
+    const envUrl = process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_API_URL;
+    if (envUrl && envUrl.trim() !== "") {
+      return envUrl.replace(/\/+$/, "");
+    }
+    return "https://ngv-backend.vercel.app/api";
+  })();
 
   // Ensure no double slash in URL
   const url = path.startsWith("/") ? `${API_URL}${path}` : `${API_URL}/${path}`;

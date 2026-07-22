@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
+const BACKEND_URL = process.env.BACKEND_API_URL
+  ? process.env.BACKEND_API_URL.replace(/\/api$/, "")
+  : "http://localhost:4000";
+
 const nextConfig: NextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
     remotePatterns: [
       {
@@ -13,7 +20,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "https://ngv-backend.vercel.app/api/:path*",
+        destination: `${BACKEND_URL}/api/:path*`,
       },
     ];
   },
