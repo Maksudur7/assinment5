@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { User, Wallet, History, Camera, Lock, Shield } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { User, Wallet, History, Camera, Lock, Shield, Laptop, Smartphone } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/src/components/ui/badge";
@@ -13,6 +13,28 @@ import { portalService } from "@/src/lib/portal";
 import { setStoredUser, getAuthToken } from "@/src/lib/portal/storage";
 import type { PortalUser } from "@/src/lib/portal/types";
 import { authClient } from "@/src/lib/auth-client";
+
+function parseDeviceName(userAgent?: string): string {
+  if (!userAgent) return "Unknown Device";
+  const ua = userAgent.toLowerCase();
+
+  let browser = "Browser";
+  if (ua.includes("edg/")) browser = "Microsoft Edge";
+  else if (ua.includes("chrome") || ua.includes("crios")) browser = "Google Chrome";
+  else if (ua.includes("firefox") || ua.includes("fxios")) browser = "Mozilla Firefox";
+  else if (ua.includes("safari") && !ua.includes("chrome")) browser = "Apple Safari";
+  else if (ua.includes("opera") || ua.includes("opr/")) browser = "Opera";
+
+  let os = "PC";
+  if (ua.includes("windows")) os = "Windows";
+  else if (ua.includes("android")) os = "Android";
+  else if (ua.includes("iphone")) os = "iPhone";
+  else if (ua.includes("ipad")) os = "iPad";
+  else if (ua.includes("mac os") || ua.includes("macintosh")) os = "macOS";
+  else if (ua.includes("linux")) os = "Linux";
+
+  return `${browser} on ${os}`;
+}
 
 export default function ProfilePage() {
   const { data: currentSessionData } = authClient.useSession();
@@ -43,48 +65,116 @@ export default function ProfilePage() {
     setError("");
     try {
       const [u, w, h] = await Promise.all([
-        portalService.getCurrentUser(),
-        portalService.getWatchlist(),
-        portalService.getWatchHistory(),
+        portalService.getCurrentUser().catch(() => null),
+        portalService.getWatchlist().catch(() => []),
+        portalService.getWatchHistory().catch(() => []),
       ]);
-      setUser(u);
-      setEditableName(u?.name ?? "");
-      setEditableEmail(u?.email ?? "");
-      setWatchlistCount((w as import("@/src/lib/portal/types").MediaItem[]).length);
+
+      const sessionUser = currentSessionData?.user;
+      const currentUser: PortalUser | null = u || (sessionUser ? {
+        id: sessionUser.id,
+        name: sessionUser.name || "User",
+        email: sessionUser.email || "",
+        role: (sessionUser as any).role || "user",
+        image: sessionUser.image || undefined,
+        hasPassword: true,
+      } : null);
+
+      setUser(currentUser);
+      setEditableName(currentUser?.name ?? "");
+      setEditableEmail(currentUser?.email ?? "");
+      
+      const validWatchlist = Array.isArray(w) ? w : [];
+      setWatchlistCount(validWatchlist.length);
       setWatchHistory(Array.isArray(h) ? h : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load profile data");
+      console.error("Profile load error:", err);
     }
   }
 
   async function loadSessions() {
     setLoadingSessions(true);
     try {
-      const [active, curr] = await Promise.all([
-        (portalService as any).getSessions(),
+      const [sessionsRes, currRes] = await Promise.all([
+        authClient.listSessions(),
         authClient.getSession(),
       ]);
-      setSessions(Array.isArray(active) ? active : []);
-      setCurrentSession(curr || null);
+
+      const activeSessions = (sessionsRes as any)?.data || (sessionsRes as any) || [];
+      setSessions(Array.isArray(activeSessions) ? activeSessions : []);
+      setCurrentSession((currRes as any)?.data || currRes || null);
     } catch (e) {
       console.error("Failed to load sessions", e);
+      setSessions([]);
     } finally {
       setLoadingSessions(false);
     }
   }
 
-  async function handleRevokeSession(sessionId: string) {
+  const uniqueDevices = useMemo(() => {
+    const currentToken = currentSession?.session?.token || currentSession?.token;
+    const currentId = currentSession?.session?.id || currentSession?.id;
+
+    const deviceMap = new Map<string, {
+      id: string;
+      token: string;
+      deviceName: string;
+      rawUserAgent: string;
+      ipAddress: string;
+      updatedAt: string | Date;
+      isCurrent: boolean;
+      allTokens: string[];
+    }>();
+
+    for (const sessionItem of sessions) {
+      const isCurrent =
+        (sessionItem.token && sessionItem.token === currentToken) ||
+        (sessionItem.id && sessionItem.id === currentId);
+
+      const deviceName = parseDeviceName(sessionItem.userAgent);
+      const ip = sessionItem.ipAddress || "127.0.0.1";
+      const key = `${deviceName}_${ip}`;
+
+      const existing = deviceMap.get(key);
+      if (!existing) {
+        deviceMap.set(key, {
+          id: sessionItem.id,
+          token: sessionItem.token || sessionItem.id,
+          deviceName,
+          rawUserAgent: sessionItem.userAgent || "",
+          ipAddress: ip,
+          updatedAt: sessionItem.updatedAt || new Date(),
+          isCurrent,
+          allTokens: [sessionItem.token || sessionItem.id],
+        });
+      } else {
+        existing.allTokens.push(sessionItem.token || sessionItem.id);
+        if (isCurrent) {
+          existing.isCurrent = true;
+          existing.id = sessionItem.id;
+          existing.token = sessionItem.token || sessionItem.id;
+        }
+        if (new Date(sessionItem.updatedAt) > new Date(existing.updatedAt)) {
+          existing.updatedAt = sessionItem.updatedAt;
+        }
+      }
+    }
+
+    return Array.from(deviceMap.values()).sort((a, b) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0));
+  }, [sessions, currentSession]);
+
+  async function handleRevokeDevice(tokens: string[]) {
     try {
-      await (portalService as any).revokeSession(sessionId);
+      await Promise.all(tokens.map((t) => authClient.revokeSession({ token: t })));
       await loadSessions();
     } catch (e) {
-      console.error("Failed to revoke session", e);
+      console.error("Failed to revoke device", e);
     }
   }
 
   async function handleRevokeAllSessions() {
     try {
-      await (portalService as any).revokeAllSessions();
+      await authClient.revokeOtherSessions();
       await loadSessions();
     } catch (e) {
       console.error("Failed to revoke all sessions", e);
@@ -411,7 +501,7 @@ export default function ProfilePage() {
             <CardTitle className="text-foreground flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" /> Active Devices & Sessions
             </CardTitle>
-            {sessions.length > 1 && (
+            {uniqueDevices.length > 1 && (
               <Button 
                 variant="destructive" 
                 size="sm" 
@@ -425,32 +515,32 @@ export default function ProfilePage() {
           <CardContent>
             {loadingSessions ? (
               <p className="text-muted-foreground text-sm">Loading active sessions...</p>
-            ) : sessions.length === 0 ? (
+            ) : uniqueDevices.length === 0 ? (
               <p className="text-muted-foreground text-sm">No active sessions found.</p>
             ) : (
               <div className="divide-y divide-border/40">
-                {sessions.map((sessionItem: any) => {
-                  const isCurrent = sessionItem.id === currentSession?.session?.id;
+                {uniqueDevices.map((device) => {
                   return (
-                    <div key={sessionItem.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
+                    <div key={`${device.deviceName}_${device.ipAddress}`} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-white flex items-center gap-2">
-                          {sessionItem.userAgent || "Unknown Device"}
-                          {isCurrent && (
-                            <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[10px]">
+                          <Laptop className="w-4 h-4 text-primary" />
+                          {device.deviceName}
+                          {device.isCurrent && (
+                            <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[10px] font-bold">
                               Current Device
                             </Badge>
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          IP Address: {sessionItem.ipAddress || "Unknown"} • Last accessed: {new Date(sessionItem.updatedAt).toLocaleString()}
+                          IP: <span className="font-mono text-zinc-300">{device.ipAddress}</span> • Last accessed: {new Date(device.updatedAt).toLocaleString()}
                         </p>
                       </div>
-                      {!isCurrent && (
+                      {!device.isCurrent && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRevokeSession(sessionItem.id)}
+                          onClick={() => handleRevokeDevice(device.allTokens)}
                           className="border-border hover:bg-white/5 text-xs font-semibold text-red-400 hover:text-red-300"
                         >
                           Revoke

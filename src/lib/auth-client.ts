@@ -27,4 +27,14 @@ export const authClient = createAuthClient({
     throw: true,
     credentials: "include",
   },
-});
+});
+
+export const {
+  signIn,
+  signUp,
+  signOut,
+  useSession,
+  forgetPassword,
+  resetPassword,
+  verifyEmail,
+} = authClient;

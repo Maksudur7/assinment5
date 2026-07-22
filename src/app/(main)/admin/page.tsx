@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Textarea } from "@/src/components/ui/textarea";
 import { portalService } from "@/src/lib/portal";
+import { getStoredUser } from "@/src/lib/portal/storage";
+import { authClient } from "@/src/lib/auth-client";
 import { adminLandingFetchers } from "@/src/lib/fetchers/core";
 import type { AdminOverview, MediaItem, PortalUser, Review, ReviewComment, LandingContent, LandingHighlight, LandingTestimonial, LandingFaq } from "@/src/lib/portal/types";
 
@@ -68,14 +70,26 @@ export default function AdminPage() {
 
   async function load() {
     try {
-      const me = await portalService.getCurrentUser();
-      setUser(me);
+      const me = await portalService.getCurrentUser().catch(() => null);
+      const stored = getStoredUser();
+      
+      const currentUser = me || (stored ? {
+        id: stored.id,
+        name: stored.name,
+        email: stored.email,
+        role: stored.role,
+        hasPassword: true,
+      } : null);
 
-      if (me && me.role === "admin") {
+      setUser(currentUser as PortalUser | null);
+
+      const userRole = String(currentUser?.role || stored?.role || "").toLowerCase();
+
+      if (userRole === "admin") {
         const [adminOverview, reviews, comments, landingRes, cats] = await Promise.all([
-          portalService.getAdminOverview() as Promise<AdminOverview>,
-          portalService.getPendingReviews() as Promise<Review[]>,
-          portalService.getPendingComments() as Promise<ReviewComment[]>,
+          portalService.getAdminOverview().catch(() => null) as Promise<AdminOverview>,
+          portalService.getPendingReviews().catch(() => []) as Promise<Review[]>,
+          portalService.getPendingComments().catch(() => []) as Promise<ReviewComment[]>,
           portalService.getLandingContent().catch(() => ({ success: false, data: { highlights: [], testimonials: [], faqs: [] } })) as Promise<any>,
           (portalService as any).getCategories().catch(() => []),
         ]);
@@ -135,10 +149,16 @@ export default function AdminPage() {
 
   async function saveMedia() {
     setMessage("");
+    const finalGenres = Array.from(new Set(
+      selectedCategories.length > 0
+        ? selectedCategories
+        : form.genres.split(",").map((x) => x.trim()).filter(Boolean)
+    ));
+
     const payload = {
       title: form.title.trim(),
       synopsis: form.synopsis.trim(),
-      genres: form.genres.split(",").map((x) => x.trim()).filter(Boolean),
+      genres: finalGenres,
       releaseYear: Number(form.releaseYear),
       director: form.director.trim(),
       cast: form.cast.split(",").map((x) => x.trim()).filter(Boolean),
@@ -168,15 +188,16 @@ export default function AdminPage() {
 
   async function editMedia(item: MediaItem) {
     setEditingId(item.id);
-    setSelectedCategories(item.genres || []);
+    const itemGenres = Array.isArray(item.genres) ? item.genres.map((g) => g.trim()).filter(Boolean) : [];
+    setSelectedCategories(itemGenres);
     setForm({
       title: item.title,
       synopsis: item.synopsis,
-      genres: item.genres.join(","),
+      genres: itemGenres.join(", "),
       releaseYear: String(item.releaseYear),
       director: item.director,
-      cast: item.cast.join(","),
-      platforms: item.platforms.join(","),
+      cast: item.cast.join(", "),
+      platforms: item.platforms.join(", "),
       streamingUrl: item.streamingUrl,
       poster: item.poster,
       duration: item.duration,
@@ -272,7 +293,9 @@ export default function AdminPage() {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Loading admin console...</div>;
   }
 
-  if (user.role !== "admin") {
+  const isAdminUser = String(user?.role || getStoredUser()?.role || "").toLowerCase() === "admin";
+
+  if (!isAdminUser) {
     return (
       <div className="min-h-screen bg-black pt-24 px-6">
         <div className="max-w-2xl mx-auto bg-zinc-900 border border-white/10 rounded-lg p-8 text-center">
@@ -348,20 +371,20 @@ export default function AdminPage() {
                     {categories.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-2 p-3 bg-zinc-800/40 rounded-lg border border-white/5">
                         {categories.map((cat) => {
-                          const isChecked = selectedCategories.includes(cat.name);
+                          const isChecked = selectedCategories.some((c) => c.toLowerCase() === cat.name.toLowerCase());
                           return (
-                            <label key={cat.id} className="flex items-center gap-1.5 bg-zinc-800 px-2.5 py-1 rounded text-xs text-white/95 cursor-pointer hover:bg-zinc-700 transition-colors select-none">
+                            <label key={cat.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors select-none ${isChecked ? "bg-[#E50914] text-white" : "bg-zinc-800 text-white/70 hover:bg-zinc-700"}`}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => {
                                   const updated = isChecked
-                                    ? selectedCategories.filter((c) => c !== cat.name)
+                                    ? selectedCategories.filter((c) => c.toLowerCase() !== cat.name.toLowerCase())
                                     : [...selectedCategories, cat.name];
                                   setSelectedCategories(updated);
-                                  setForm((p) => ({ ...p, genres: updated.join(",") }));
+                                  setForm((p) => ({ ...p, genres: updated.join(", ") }));
                                 }}
-                                className="accent-[#E50914] h-3.5 w-3.5"
+                                className="accent-white h-3.5 w-3.5"
                               />
                               {cat.name}
                             </label>
@@ -374,8 +397,9 @@ export default function AdminPage() {
                       placeholder="e.g. Action, Drama"
                       value={form.genres}
                       onChange={(e) => {
-                        setForm((p) => ({ ...p, genres: e.target.value }));
-                        setSelectedCategories(e.target.value.split(",").map((x) => x.trim()).filter(Boolean));
+                        const val = e.target.value;
+                        setForm((p) => ({ ...p, genres: val }));
+                        setSelectedCategories(val.split(",").map((x) => x.trim()).filter(Boolean));
                       }}
                     />
                   </div>

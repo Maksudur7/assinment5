@@ -328,16 +328,17 @@ export const httpPortalService = {
     });
     return res as any;
   },
-  requestPasswordReset: (email: string) =>
-    call("/auth/forgot-password", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }),
-  resetPassword: (token: string, newPassword: string) =>
-    call("/auth/reset-password", {
-      method: "POST",
-      body: JSON.stringify({ token, newPassword }),
-    }),
+  requestPasswordReset: async (email: string) => {
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/reset-password` : "/reset-password";
+    const res: any = await authClient.forgetPassword({ email, redirectTo });
+    if (res?.error) throw new Error(res.error.message || "Failed to request password reset");
+    return { ok: true };
+  },
+  resetPassword: async (token: string, newPassword: string) => {
+    const res: any = await authClient.resetPassword({ token, newPassword });
+    if (res?.error) throw new Error(res.error.message || "Failed to reset password");
+    return res;
+  },
   getSessions: () => call<any[]>("/auth/sessions"),
   revokeSession: (token: string) =>
     call("/auth/sessions/revoke", {

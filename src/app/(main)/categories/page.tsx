@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Film, Layers, Search, SlidersHorizontal, Sparkles, TrendingUp } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AdSlot } from "@/src/components/AdSlot";
 import { VideoCard } from "@/src/components/VideoCard";
@@ -29,11 +29,13 @@ import type { CatalogVideo } from "@/src/lib/data/catalog";
 
 const DEFAULT_SORT: CategorySort = "trending";
 
-export default function CategoriesPage() {
+function CategoriesContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams.get("category") || "all";
 
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
+  const [category, setCategory] = useState(initialCategory);
   const [language, setLanguage] = useState("all");
   const [sort, setSort] = useState<CategorySort>(DEFAULT_SORT);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,11 +49,18 @@ export default function CategoriesPage() {
   });
 
   useEffect(() => {
+    const catParam = searchParams.get("category");
+    if (catParam) {
+      setCategory(catParam);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     async function bootstrap() {
       const [categoryItems, highlights, initialVideos] = await Promise.all([
         fetchCategories(),
         fetchCategoryHighlights(),
-        fetchCategoryVideos({ sort: DEFAULT_SORT }),
+        fetchCategoryVideos({ category: initialCategory, sort: DEFAULT_SORT }),
       ]);
 
       setCategories(categoryItems);
@@ -286,10 +295,17 @@ export default function CategoriesPage() {
                   <Badge className="bg-[#E50914] text-white">{videos.length} titles</Badge>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                  {videos.map((video) => (
+                  {videos.map((video: any) => (
                     <VideoCard
                       key={video.id}
-                      {...video}
+                      id={video.id}
+                      title={video.title}
+                      description={video.description || video.synopsis}
+                      thumbnail={video.thumbnail || video.poster || ""}
+                      duration={video.duration}
+                      rating={video.rating ?? video.avgRating}
+                      year={String(video.year || video.releaseYear || "")}
+                      category={video.category || video.genres?.[0] || "General"}
                       onClick={() => router.push(`/watch/${video.id}`)}
                     />
                   ))}
@@ -305,10 +321,17 @@ export default function CategoriesPage() {
             </div>
             <div className="bg-zinc-900 rounded-lg p-6 border border-white/10">
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                {featuredVideos.map((video) => (
+                {featuredVideos.map((video: any) => (
                   <VideoCard
                     key={`featured-${video.id}`}
-                    {...video}
+                    id={video.id}
+                    title={video.title}
+                    description={video.description || video.synopsis}
+                    thumbnail={video.thumbnail || video.poster || ""}
+                    duration={video.duration}
+                    rating={video.rating ?? video.avgRating}
+                    year={String(video.year || video.releaseYear || "")}
+                    category={video.category || video.genres?.[0] || "General"}
                     onClick={() => router.push(`/watch/${video.id}`)}
                   />
                 ))}
@@ -318,5 +341,13 @@ export default function CategoriesPage() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export default function CategoriesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black pt-24 text-center text-white/70">Loading categories...</div>}>
+      <CategoriesContent />
+    </Suspense>
   );
 }

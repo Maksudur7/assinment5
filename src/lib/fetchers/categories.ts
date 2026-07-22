@@ -38,7 +38,7 @@ function sortVideos(
 
 export async function fetchCategories(): Promise<CategoryItem[]> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-  const res = await fetch(`${apiUrl}/categories`);
+  const res = await fetch(`${apiUrl}/categories`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch categories");
   // Assuming backend returns [{ name: string, ... }]
   const data = await res.json();
@@ -67,7 +67,7 @@ export async function fetchCategoryVideos(
   if (category !== "all") {
     // Full path logic
     const url = `${API_URL}/categories/${encodeURIComponent(category)}/videos`;
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("Failed");
     videos = await res.json();
   } else {
@@ -77,18 +77,27 @@ export async function fetchCategoryVideos(
     if (language !== "all") params.append("language", language);
     if (sort) params.append("sort", sort);
 
-    const res = await fetch(`${API_URL}/media?${params.toString()}`);
+    const res = await fetch(`${API_URL}/media?${params.toString()}`, { cache: "no-store" });
     const data = await res.json();
     videos = data.items || [];
   }
 
-  return sortVideos(videos, sort as CategorySort);
+  const normalized = (videos || []).map((item: any) => ({
+    ...item,
+    thumbnail: item.thumbnail || item.poster || "",
+    rating: item.rating ?? item.avgRating ?? 0,
+    year: String(item.year || item.releaseYear || ""),
+    description: item.description || item.synopsis || "",
+    category: item.category || item.genres?.[0] || "General",
+  }));
+
+  return sortVideos(normalized, sort as CategorySort);
 }
 
 export async function fetchCategoryHighlights() {
   const categories = await fetchCategories();
   // Use /api/media?sort=popular for featured
-  const res = await fetch(`${API_URL}/media?sort=popular&pageSize=6`);
+  const res = await fetch(`${API_URL}/media?sort=popular&pageSize=6`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch highlights");
   const data = await res.json();
   return {

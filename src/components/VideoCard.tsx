@@ -16,19 +16,23 @@ interface VideoCardProps {
   onClick?: () => void;
 }
 
-export function VideoCard({
-  id,
-  title,
-  description,
-  thumbnail,
-  duration,
-  rating,
-  year,
-  category,
+export function VideoCard(props: VideoCardProps & { poster?: string }) {
+  const {
+    id,
+    title,
+    description,
+    thumbnail,
+    poster,
+    duration,
+    rating,
+    year,
+    category,
+    isNew,
+    onClick,
+  } = props;
 
-  isNew,
-  onClick,
-}: VideoCardProps) {
+  const imageSrc = thumbnail || poster || "";
+
   return (
     <div
       data-media-id={id}
@@ -37,7 +41,7 @@ export function VideoCard({
     >
       {/* Movie Poster Image */}
       <ImageWithFallback
-        src={thumbnail}
+        src={imageSrc}
         alt={title}
         className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
       />

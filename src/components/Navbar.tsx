@@ -100,46 +100,57 @@ export function Navbar() {
   useEffect(() => {
     let mountedLocal = true;
 
-    if (session?.user) {
-      setStoredUser({
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        role: (session.user as any).role || "user",
-      });
-      const token = session.session?.token;
-      if (token) {
-        setAuthToken(token);
-      }
-      if (mountedLocal) {
-        setUser({
-          ...session.user,
-          role: (session.user as any).role || "user",
-        });
-        setLoadingUser(false);
-      }
-      return () => { mountedLocal = false; };
+    if (session?.session?.token) {
+      setAuthToken(session.session.token);
     }
 
     setLoadingUser(true);
     httpPortalService.getCurrentUser()
       .then((u) => {
-        if (mountedLocal) {
+        if (mountedLocal && u) {
           setUser(u);
+          setStoredUser({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            image: u.image,
+          });
+          setLoadingUser(false);
+        } else if (mountedLocal && session?.user) {
+          const sessionRole = (session.user as any).role || getStoredUser()?.role || "user";
+          setUser({
+            ...session.user,
+            role: sessionRole,
+          });
           setLoadingUser(false);
         }
       })
       .catch(() => {
         if (mountedLocal) {
-          setUser(getStoredUser() || null);
+          const stored = getStoredUser();
+          if (stored) {
+            setUser(stored);
+          } else if (session?.user) {
+            const sessionRole = (session.user as any).role || "user";
+            setUser({
+              ...session.user,
+              role: sessionRole,
+            });
+          } else {
+            setUser(null);
+          }
           setLoadingUser(false);
         }
       });
-    return () => { mountedLocal = false; };
+
+    return () => {
+      mountedLocal = false;
+    };
   }, [session]);
 
   const currentUser = user;
-  const currentUserRole: UserRole = currentUser?.role || "user";
+  const currentUserRole = String(currentUser?.role || getStoredUser()?.role || "user").toLowerCase();
   const isAdmin = currentUserRole === "admin";
 
   const handleLogout = async () => {
@@ -159,7 +170,7 @@ export function Navbar() {
     { name: "Home", href: "/", icon: Home },
     { name: "All Titles", href: "/library", icon: Film },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    ...(isAdmin ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
+    ...(mounted && isAdmin ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
   ];
 
   return (

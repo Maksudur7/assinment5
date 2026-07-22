@@ -16,11 +16,11 @@ export const authFetchers = {
   async me() {
     const sessionData = await portalService.getCurrentUser();
 
-    if (!sessionData || !sessionData.user) {
+    if (!sessionData) {
       throw new Error("Failed to fetch current user");
     }
 
-    const user = sessionData.user;
+    const user = (sessionData as any).user || sessionData;
 
     return {
       id: String(user.id ?? ""),
@@ -31,89 +31,90 @@ export const authFetchers = {
   },
 
   async login(email: string, password: string) {
-    const res = await authClient.signIn.email({
+    const res: any = await authClient.signIn.email({
       email,
       password,
       callbackURL: "/",
     });
 
-    console.log("[DEBUG] login response:", res);
+    if (res?.error) {
+      throw new Error(res.error.message || "Invalid credentials");
+    }
 
-    if (!res) throw new Error("Login failed");
-
+    const result = res?.data || res;
     const sessionToken =
-      (res as any).token ||
-      (res as any).session?.token ||
-      (res as any).accessToken ||
-      (res as any).jwt;
+      result?.token ||
+      result?.session?.token ||
+      result?.accessToken;
 
     if (sessionToken) {
       setAuthToken(sessionToken);
     }
 
-    if (res.user) {
+    if (result?.user) {
       setStoredUser({
-        id: res.user.id,
-        name: res.user.name,
-        email: res.user.email,
-        role: (res.user as any).role || "user",
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        role: result.user.role || "user",
       });
     }
 
-    return res;
+    return result;
   },
 
   async register(name: string, email: string, password: string) {
-    const res = await authClient.signUp.email({
+    const res: any = await authClient.signUp.email({
       name,
       email,
       password,
       callbackURL: "/",
     });
 
-    console.log("[DEBUG] register response:", res);
+    if (res?.error) {
+      throw new Error(res.error.message || "Registration failed");
+    }
 
-    if (!res) throw new Error("Signup failed");
-
+    const result = res?.data || res;
     const sessionToken =
-      (res as any).token ||
-      (res as any).session?.token ||
-      (res as any).accessToken ||
-      (res as any).jwt;
+      result?.token ||
+      result?.session?.token ||
+      result?.accessToken;
 
     if (sessionToken) {
       setAuthToken(sessionToken);
     }
 
-    if (res.user) {
+    if (result?.user) {
       setStoredUser({
-        id: res.user.id,
-        name: res.user.name,
-        email: res.user.email,
-        role: (res.user as any).role || "user",
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        role: result.user.role || "user",
       });
     }
 
-    return res;
+    return result;
   },
 
   async socialLogin(provider: SocialProvider) {
-    const callbackURL = typeof window !== "undefined"
-      ? `${window.location.origin}/`
-      : "/";
+    const callbackURL =
+      typeof window !== "undefined" ? `${window.location.origin}/` : "/";
 
-    // Directly return result, not { data, error }
-    const res = await authClient.signIn.social({
+    const res: any = await authClient.signIn.social({
       provider,
       callbackURL,
+      disableRedirect: true,
     });
 
-    // Better Auth will automatically throw error if any (since throw: true)
-    if (!res) throw new Error("Social login failed");
+    if (res?.error) {
+      throw new Error(res.error.message || "Social login failed");
+    }
 
-    // Save session token (using as any to avoid TypeScript error)
-    const sessionToken = (res as any).token || (res as any).session?.token;
-    if (sessionToken) setAuthToken(sessionToken);
+    const targetUrl = res?.data?.url || res?.url;
+    if (targetUrl && typeof window !== "undefined") {
+      window.location.href = targetUrl;
+    }
 
     return res;
   },
@@ -124,35 +125,35 @@ export const authFetchers = {
         ? `${window.location.origin}/reset-password`
         : "/reset-password";
 
-    // Call forgetPassword method directly if type error occurs.
-    const res = await (authClient as any).forgetPassword({
+    const res: any = await authClient.forgetPassword({
       email,
       redirectTo,
     });
 
-    if (!res) throw new Error("Failed to request reset");
+    if (res?.error) {
+      throw new Error(res.error.message || "Failed to request password reset");
+    }
 
-    return { ok: true, resetToken: "" };
+    return { ok: true };
   },
 
   async resetPassword(token: string, newPassword: string) {
-    // Directly return result here as well
-    const res = await authClient.resetPassword({
+    const res: any = await authClient.resetPassword({
       token,
       newPassword,
     });
 
-    if (!res) throw new Error("Failed to reset password");
+    if (res?.error) {
+      throw new Error(res.error.message || "Failed to reset password");
+    }
 
     return res;
   },
 
   async logout() {
-    // Call signOut method directly
     await authClient.signOut();
-
-    // Clear token
     setAuthToken("");
+    setStoredUser(null);
   },
 };
 
