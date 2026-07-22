@@ -91,6 +91,45 @@ export default function ProfilePage() {
     setPasswordError("");
     setPasswordSuccess("");
 
+    if (!user) return;
+
+    if (!user.hasPassword) {
+      if (!newPassword || !confirmPassword) {
+        setPasswordError("All password fields are required.");
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        setPasswordError("New password must be at least 8 characters.");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setPasswordError("Passwords do not match.");
+        return;
+      }
+
+      setUpdatingPassword(true);
+      try {
+        await (authClient as any).setPassword({
+          newPassword,
+        });
+        setPasswordSuccess("Password set successfully. You can now sign in using email & password.");
+        setUser({
+          ...user,
+          hasPassword: true,
+        });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } catch (err: any) {
+        setPasswordError(err?.message || "Failed to set password.");
+      } finally {
+        setUpdatingPassword(false);
+      }
+      return;
+    }
+
     if (!currentPassword || !newPassword || !confirmPassword) {
       setPasswordError("All password fields are required.");
       return;
@@ -164,13 +203,23 @@ export default function ProfilePage() {
 
     setSaving(true);
     try {
-      // 1. Call Better Auth to update user details (like name and image)
+      let finalImageUrl = user.image;
+
+      // 1. Upload Base64 image to backend first to get a short URL
+      if (previewImage) {
+        const uploadResult = await (portalService as any).uploadAvatar(previewImage);
+        if (uploadResult?.image) {
+          finalImageUrl = uploadResult.image;
+        }
+      }
+
+      // 2. Call Better Auth to update user details with short URL
       await authClient.updateUser({
         name: editableName.trim(),
-        image: previewImage || user.image || undefined,
+        image: finalImageUrl || undefined,
       });
 
-      // 2. Call backend updateProfile to persist name and email changes
+      // 3. Call backend updateProfile to persist name and email changes
       await (portalService as any).updateProfile(
         editableName.trim(),
         editableEmail.trim()
@@ -180,7 +229,7 @@ export default function ProfilePage() {
         ...user,
         name: editableName.trim(),
         email: editableEmail.trim(),
-        image: previewImage || user.image,
+        image: finalImageUrl,
       };
       setUser(updated);
       setStoredUser({
@@ -188,6 +237,7 @@ export default function ProfilePage() {
         name: updated.name,
         email: updated.email,
         role: updated.role,
+        image: finalImageUrl,
       });
 
       // Update local storage store
@@ -200,6 +250,7 @@ export default function ProfilePage() {
               ...parsed.user,
               name: updated.name,
               email: updated.email,
+              image: updated.image,
             };
             window.localStorage.setItem("ngv-portal-store-v2", JSON.stringify(parsed));
           } catch (e) {
@@ -305,18 +356,20 @@ export default function ProfilePage() {
               <form onSubmit={handleChangePassword} className="space-y-4">
                 {passwordError && <p className="text-destructive text-sm font-semibold">{passwordError}</p>}
                 {passwordSuccess && <p className="text-green-500 text-sm font-semibold">{passwordSuccess}</p>}
+                {user?.hasPassword && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Current Password</label>
+                    <Input 
+                      type="password" 
+                      value={currentPassword} 
+                      onChange={(e) => setCurrentPassword(e.target.value)} 
+                      placeholder="••••••••"
+                      className="bg-input border-border text-foreground" 
+                    />
+                  </div>
+                )}
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Current Password</label>
-                  <Input 
-                    type="password" 
-                    value={currentPassword} 
-                    onChange={(e) => setCurrentPassword(e.target.value)} 
-                    placeholder="••••••••"
-                    className="bg-input border-border text-foreground" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">New Password</label>
+                  <label className="text-xs text-muted-foreground">{user?.hasPassword ? "New Password" : "Create Password"}</label>
                   <Input 
                     type="password" 
                     value={newPassword} 
@@ -340,7 +393,7 @@ export default function ProfilePage() {
                   className="w-full bg-[#E50914] hover:bg-[#B2070F] text-white font-bold" 
                   disabled={updatingPassword}
                 >
-                  {updatingPassword ? "Updating..." : "Change Password"}
+                  {updatingPassword ? "Updating..." : (user?.hasPassword ? "Change Password" : "Set Password")}
                 </Button>
               </form>
             </CardContent>

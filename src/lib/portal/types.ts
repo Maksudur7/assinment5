@@ -8,6 +8,7 @@ export type PortalUser = {
   role: UserRole;
   password?: string;
   image?: string;
+  hasPassword?: boolean;
 };
 
 export type SocialProvider = "google" | "facebook";

@@ -20,5 +20,6 @@ export const authClient = createAuthClient({
       token: () => getAuthToken(),
     },
     throw: true,
+    credentials: "include",
   },
 });

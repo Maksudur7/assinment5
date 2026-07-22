@@ -7,6 +7,7 @@ type Store = {
     name: string;
     email: string;
     role: UserRole;
+    image?: string;
   } | null;
 };
 

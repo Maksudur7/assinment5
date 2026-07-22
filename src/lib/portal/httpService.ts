@@ -202,6 +202,11 @@ export const httpPortalService = {
       method: "PUT",
       body: JSON.stringify({ name, email }),
     }),
+  uploadAvatar: (base64Image: string) =>
+    call<{ success: boolean; image: string }>("/users/me/avatar", {
+      method: "POST",
+      body: JSON.stringify({ image: base64Image }),
+    }),
   switchUser: (role: UserRole) =>
     call("/dev/switch-user", {
       method: "POST",
