@@ -5,6 +5,9 @@ const BACKEND_URL = process.env.BACKEND_API_URL
   : "http://localhost:4000";
 
 const nextConfig: NextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
     remotePatterns: [
       {

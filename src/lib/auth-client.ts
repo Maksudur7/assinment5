@@ -2,7 +2,7 @@ import { createAuthClient } from "better-auth/react";
 import { getAuthToken } from "./portal/storage";
 
 function normalizeAuthUrl(url: string): string {
-  let trimmed = url.replace(/\/+$/, "");
+  const trimmed = url.replace(/\/+$/, "");
   return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
 }
 
