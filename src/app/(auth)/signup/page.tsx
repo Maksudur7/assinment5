@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Film, User, CheckCircle2 } from "lucide-react";
 import { authFetchers } from "@/src/lib/fetchers/core";
 import { triggerGlobalError } from "@/src/lib/events";
+import { NGVActionOverlay } from "@/src/components/ui/NGVLoader";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -85,6 +86,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-6 py-12 relative overflow-hidden bg-black">
+      {loading && <NGVActionOverlay text="Creating your NGV account..." />}
       {/* Cinematic Background Gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(229,9,20,0.15),transparent_50%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_100%,_rgba(255,255,255,0.03),transparent_40%)] pointer-events-none" />
