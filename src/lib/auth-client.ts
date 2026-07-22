@@ -4,6 +4,8 @@ import { getAuthToken } from "./portal/storage";
 function normalizeAuthUrl(url: string): string {
   let trimmed = url.replace(/\/+$/, "");
   return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
+}
+
 const BACKEND_AUTH_URL = normalizeAuthUrl(
   (typeof window === "undefined" ? process.env.BACKEND_AUTH_URL : null) ||
     process.env.NEXT_PUBLIC_AUTH_URL ||
