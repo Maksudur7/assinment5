@@ -2,8 +2,16 @@ import { createAuthClient } from "better-auth/react";
 import { getAuthToken } from "./portal/storage";
 
 function normalizeAuthUrl(url: string): string {
-  const trimmed = url.replace(/\/+$/, "");
-  return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
+  let trimmed = url.replace(/\/+$/, "");
+  trimmed = trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
+
+  // If the URL is relative and we are running on the server (like next build / SSR),
+  // we must prepend a mock base URL to prevent ERR_INVALID_URL from Node's URL parser.
+  if (trimmed.startsWith("/") && typeof window === "undefined") {
+    return `http://localhost:3000${trimmed}`;
+  }
+
+  return trimmed;
 }
 
 const BACKEND_AUTH_URL = normalizeAuthUrl(
