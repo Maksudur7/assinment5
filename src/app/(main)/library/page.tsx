@@ -167,7 +167,7 @@ export default function LibraryPage() {
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
             {Array.from({ length: PAGE_SIZE }, (_, i) => (
               <div key={i} className="rounded-lg border border-border bg-card p-3 animate-pulse space-y-3">
                 <div className="aspect-2/3 w-full rounded bg-muted" />
@@ -182,7 +182,7 @@ export default function LibraryPage() {
             No titles matched your filters. Try resetting filter values.
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
             {items.map((item) => (
               <VideoCard
                 key={item.id}

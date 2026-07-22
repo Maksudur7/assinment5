@@ -18,10 +18,10 @@ import {
 import { authClient } from "../auth-client";
 import { triggerGlobalError } from "../events";
 
-// Helper: On 401/403, auto-logout and clear token/user, then optionally run a callback (e.g. show login modal)
+// Helper: On 401, auto-logout and clear token/user, then optionally run a callback (e.g. show login modal)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handleAuthError(err: any, onLogout?: () => void, isSilentCheck = false) {
-  if (err?.message?.includes("401") || err?.message?.includes("403")) {
+  if (err?.message?.includes("401")) {
     setAuthToken("");
     setStoredUser(null);
     if (typeof window !== "undefined") {
@@ -64,9 +64,20 @@ async function call<T>(
   });
 
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401) {
       handleAuthError({ message: `${res.status}` }, onLogout, isSilentCheck);
       throw new Error(`Unauthorized (${res.status})`);
+    }
+
+    if (res.status === 403) {
+      if (typeof window !== "undefined" && !isSilentCheck) {
+        triggerGlobalError({
+          title: "Access Denied",
+          message: "You do not have permission to perform this action. Admin rights required.",
+          action: "dismiss"
+        });
+      }
+      throw new Error(`Forbidden (${res.status})`);
     }
     
     let errorMsg = `API Error: ${res.status}`;
@@ -182,6 +193,14 @@ export const httpPortalService = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       handleAuthError(err, onLogout, true);
+      if (err?.message?.includes("401") || err?.message?.includes("403")) {
+        setAuthToken("");
+        setStoredUser(null);
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("ngv-portal-store-v2");
+        }
+        return null;
+      }
       try {
         const localUser = getStoredUser();
         if (localUser) {
@@ -425,4 +444,15 @@ export const httpPortalService = {
     }).then((res: any) => res.data),
   deleteLandingFaq: (id: string) =>
     call(`/landing/faqs/${id}`, { method: "DELETE" }),
+  
+  getCategories: () => call<any[]>("/categories"),
+  createCategory: (name: string, icon?: string) =>
+    call<any>("/admin/categories", {
+      method: "POST",
+      body: JSON.stringify({ name, icon }),
+    }),
+  deleteCategory: (id: string) =>
+    call<any>(`/admin/categories/${id}`, {
+      method: "DELETE",
+    }),
 };

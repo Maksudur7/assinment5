@@ -37,6 +37,7 @@ export default function ProfilePage() {
   // Active Sessions States
   const [sessions, setSessions] = useState<any[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [currentSession, setCurrentSession] = useState<any>(null);
 
   async function load() {
     setError("");
@@ -59,8 +60,12 @@ export default function ProfilePage() {
   async function loadSessions() {
     setLoadingSessions(true);
     try {
-      const active = await (portalService as any).getSessions();
+      const [active, curr] = await Promise.all([
+        (portalService as any).getSessions(),
+        authClient.getSession(),
+      ]);
       setSessions(Array.isArray(active) ? active : []);
+      setCurrentSession(curr || null);
     } catch (e) {
       console.error("Failed to load sessions", e);
     } finally {
@@ -68,9 +73,9 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleRevokeSession(token: string) {
+  async function handleRevokeSession(sessionId: string) {
     try {
-      await (portalService as any).revokeSession(token);
+      await (portalService as any).revokeSession(sessionId);
       await loadSessions();
     } catch (e) {
       console.error("Failed to revoke session", e);
@@ -425,7 +430,7 @@ export default function ProfilePage() {
             ) : (
               <div className="divide-y divide-border/40">
                 {sessions.map((sessionItem: any) => {
-                  const isCurrent = sessionItem.token === getAuthToken() || sessionItem.token === currentSessionData?.session?.token;
+                  const isCurrent = sessionItem.id === currentSession?.session?.id;
                   return (
                     <div key={sessionItem.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
                       <div className="space-y-1">
@@ -445,7 +450,7 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRevokeSession(sessionItem.token)}
+                          onClick={() => handleRevokeSession(sessionItem.id)}
                           className="border-border hover:bg-white/5 text-xs font-semibold text-red-400 hover:text-red-300"
                         >
                           Revoke

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Clapperboard, DollarSign, EyeOff, Shield, Trash2, Upload, UserCheck, XCircle } from "lucide-react";
+import { BarChart3, Clapperboard, DollarSign, EyeOff, Shield, Trash2, Upload, UserCheck, XCircle, Layers, Plus } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -54,6 +54,12 @@ export default function AdminPage() {
   const [testimonialForm, setTestimonialForm] = useState({ name: "", quote: "" });
   const [faqForm, setFaqForm] = useState({ question: "", answer: "" });
 
+  // Dynamic categories state
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categoryNameInput, setCategoryNameInput] = useState("");
+  const [categoryIconInput, setCategoryIconInput] = useState("Film");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
   async function loadMedia(page = 1, search = "") {
     const result = await portalService.getMedia({ page, pageSize: MEDIA_PAGE_SIZE, search }) as any;
     setMedia(result.items || []);
@@ -61,23 +67,56 @@ export default function AdminPage() {
   }
 
   async function load() {
-    const [me, adminOverview, reviews, comments, landingRes] = await Promise.all([
-      portalService.getCurrentUser(),
-      portalService.getAdminOverview() as Promise<AdminOverview>,
-      portalService.getPendingReviews() as Promise<Review[]>,
-      portalService.getPendingComments() as Promise<ReviewComment[]>,
-      portalService.getLandingContent().catch(() => ({ success: false, data: { highlights: [], testimonials: [], faqs: [] } })) as Promise<any>,
-    ]);
+    try {
+      const me = await portalService.getCurrentUser();
+      setUser(me);
 
-    setUser(me);
-    setOverview(adminOverview);
-    setPendingReviews(reviews);
-    setPendingComments(comments);
-    
-    if (landingRes?.data) {
-      setHighlights(landingRes.data.highlights || []);
-      setTestimonials(landingRes.data.testimonials || []);
-      setFaqs(landingRes.data.faqs || []);
+      if (me && me.role === "admin") {
+        const [adminOverview, reviews, comments, landingRes, cats] = await Promise.all([
+          portalService.getAdminOverview() as Promise<AdminOverview>,
+          portalService.getPendingReviews() as Promise<Review[]>,
+          portalService.getPendingComments() as Promise<ReviewComment[]>,
+          portalService.getLandingContent().catch(() => ({ success: false, data: { highlights: [], testimonials: [], faqs: [] } })) as Promise<any>,
+          (portalService as any).getCategories().catch(() => []),
+        ]);
+
+        setOverview(adminOverview);
+        setPendingReviews(reviews || []);
+        setPendingComments(comments || []);
+        setCategories(cats || []);
+        
+        if (landingRes?.data) {
+          setHighlights(landingRes.data.highlights || []);
+          setTestimonials(landingRes.data.testimonials || []);
+          setFaqs(landingRes.data.faqs || []);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load admin data:", e);
+    }
+  }
+
+  async function handleAddCategory() {
+    if (!categoryNameInput.trim()) return;
+    try {
+      await (portalService as any).createCategory(categoryNameInput.trim(), categoryIconInput.trim());
+      setCategoryNameInput("");
+      const updatedCats = await (portalService as any).getCategories();
+      setCategories(updatedCats || []);
+      setLandingMessage("Category created successfully.");
+    } catch (err) {
+      setLandingMessage(err instanceof Error ? err.message : "Error creating category");
+    }
+  }
+
+  async function handleDeleteCategory(id: string) {
+    try {
+      await (portalService as any).deleteCategory(id);
+      const updatedCats = await (portalService as any).getCategories();
+      setCategories(updatedCats || []);
+      setLandingMessage("Category deleted successfully.");
+    } catch (err) {
+      setLandingMessage(err instanceof Error ? err.message : "Error deleting category");
     }
   }
 
@@ -119,6 +158,7 @@ export default function AdminPage() {
       }
       setEditingId(null);
       setForm(EMPTY_FORM);
+      setSelectedCategories([]);
       await load();
       await loadMedia(mediaPage, mediaSearch);
     } catch (err) {
@@ -128,6 +168,7 @@ export default function AdminPage() {
 
   async function editMedia(item: MediaItem) {
     setEditingId(item.id);
+    setSelectedCategories(item.genres || []);
     setForm({
       title: item.title,
       synopsis: item.synopsis,
@@ -286,6 +327,7 @@ export default function AdminPage() {
         <Tabs defaultValue="media" className="space-y-6">
           <TabsList className="bg-zinc-900 border border-white/10 flex-wrap h-auto">
             <TabsTrigger value="media" className="data-[state=active]:bg-[#E50914] py-2"><Upload className="w-4 h-4 mr-2" />Media Library</TabsTrigger>
+            <TabsTrigger value="categories" className="data-[state=active]:bg-[#E50914] py-2"><Layers className="w-4 h-4 mr-2" />Categories</TabsTrigger>
             <TabsTrigger value="moderation" className="data-[state=active]:bg-[#E50914] py-2"><Shield className="w-4 h-4 mr-2" />Moderation</TabsTrigger>
             <TabsTrigger value="reports" className="data-[state=active]:bg-[#E50914] py-2"><BarChart3 className="w-4 h-4 mr-2" />Reports</TabsTrigger>
             <TabsTrigger value="landing" className="data-[state=active]:bg-[#E50914] py-2"><Upload className="w-4 h-4 mr-2" />Landing Page</TabsTrigger>
@@ -300,8 +342,45 @@ export default function AdminPage() {
               <CardContent className="space-y-3">
                 <div><Label className="text-white">Title</Label><Input className="bg-zinc-800 border-white/10 text-white" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} /></div>
                 <div><Label className="text-white">Synopsis</Label><Textarea className="bg-zinc-800 border-white/10 text-white" value={form.synopsis} onChange={(e) => setForm((p) => ({ ...p, synopsis: e.target.value }))} /></div>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-white">Genres / Categories</Label>
+                    {categories.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2 p-3 bg-zinc-800/40 rounded-lg border border-white/5">
+                        {categories.map((cat) => {
+                          const isChecked = selectedCategories.includes(cat.name);
+                          return (
+                            <label key={cat.id} className="flex items-center gap-1.5 bg-zinc-800 px-2.5 py-1 rounded text-xs text-white/95 cursor-pointer hover:bg-zinc-700 transition-colors select-none">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  const updated = isChecked
+                                    ? selectedCategories.filter((c) => c !== cat.name)
+                                    : [...selectedCategories, cat.name];
+                                  setSelectedCategories(updated);
+                                  setForm((p) => ({ ...p, genres: updated.join(",") }));
+                                }}
+                                className="accent-[#E50914] h-3.5 w-3.5"
+                              />
+                              {cat.name}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <Input
+                      className="bg-zinc-800 border-white/10 text-white placeholder:text-zinc-500"
+                      placeholder="e.g. Action, Drama"
+                      value={form.genres}
+                      onChange={(e) => {
+                        setForm((p) => ({ ...p, genres: e.target.value }));
+                        setSelectedCategories(e.target.value.split(",").map((x) => x.trim()).filter(Boolean));
+                      }}
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-white">Genres (comma)</Label><Input className="bg-zinc-800 border-white/10 text-white" value={form.genres} onChange={(e) => setForm((p) => ({ ...p, genres: e.target.value }))} /></div>
                   <div><Label className="text-white">Release Year</Label><Input type="number" className="bg-zinc-800 border-white/10 text-white" value={form.releaseYear} onChange={(e) => setForm((p) => ({ ...p, releaseYear: e.target.value }))} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -318,7 +397,7 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button onClick={saveMedia} className="bg-[#E50914] hover:bg-[#B2070F]">{editingId ? "Update" : "Create"}</Button>
-                  {editingId ? <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => { setEditingId(null); setForm(EMPTY_FORM); }}>Cancel Edit</Button> : null}
+                  {editingId ? <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setSelectedCategories([]); }}>Cancel Edit</Button> : null}
                 </div>
                 {message ? <p className="text-sm text-white/70">{message}</p> : null}
               </CardContent>
@@ -517,6 +596,86 @@ export default function AdminPage() {
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card className="bg-zinc-900 border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-white">Add New Category</CardTitle>
+                  <CardDescription>Create a new dynamic category row for the home page</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-white">Category Name</Label>
+                    <Input
+                      className="bg-zinc-800 border-white/10 text-white"
+                      placeholder="e.g. Anime, K-Drama, Horror"
+                      value={categoryNameInput}
+                      onChange={(e) => setCategoryNameInput(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-white">Icon Name (optional)</Label>
+                    <Input
+                      className="bg-zinc-800 border-white/10 text-white"
+                      placeholder="e.g. Film, Sparkles, Heart"
+                      value={categoryIconInput}
+                      onChange={(e) => setCategoryIconInput(e.target.value)}
+                    />
+                  </div>
+                  <Button className="bg-[#E50914] hover:bg-[#B2070F]" onClick={handleAddCategory}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Create Category
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-900 border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-white">Dynamic Categories</CardTitle>
+                  <CardDescription>Manage active categories</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/10">
+                        <TableHead className="text-white">Category Name</TableHead>
+                        <TableHead className="text-white">Icon</TableHead>
+                        <TableHead className="text-white">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categories.length === 0 ? (
+                        <TableRow className="border-white/10">
+                          <TableCell colSpan={3} className="text-white/60 text-center py-6">
+                            No dynamic categories found. Create one on the left.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        categories.map((cat) => (
+                          <TableRow key={cat.id} className="border-white/10">
+                            <TableCell className="text-white font-semibold">{cat.name}</TableCell>
+                            <TableCell className="text-white/70">{cat.icon}</TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="bg-red-900/20 border-red-700 text-red-300 hover:bg-red-900/30"
+                                onClick={() => void handleDeleteCategory(cat.id)}
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Delete
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>

@@ -15,12 +15,24 @@ async function fetchFromAPI(path: string) {
 
 export default async function Page() {
   try {
-    const [featuredData, trendingData, newReleasesData, landingContent] = await Promise.all([
+    const [categories, featuredData, trendingData, newReleasesData, landingContent] = await Promise.all([
+      fetchFromAPI("/categories").catch(() => []),
       fetchFromAPI("/media?sort=highest-rated&pageSize=6").then((r) => r.items || []),
       fetchFromAPI("/media?sort=most-reviewed&pageSize=12").then((r) => r.items || []),
       fetchFromAPI("/media?sort=latest&pageSize=12").then((r) => r.items || []),
       fetchFromAPI("/landing").then((r) => r.data || null).catch(() => null),
     ]);
+
+    const categoriesWithVideos = await Promise.all(
+      (categories || []).map(async (cat: any) => {
+        try {
+          const videos = await fetchFromAPI(`/categories/${encodeURIComponent(cat.name)}/videos`);
+          return { ...cat, videos: videos || [] };
+        } catch (e) {
+          return { ...cat, videos: [] };
+        }
+      })
+    );
 
     const featured = featuredData.length > 0 ? featuredData[0] : null;
     const trending = trendingData.slice(0, 6);
@@ -37,6 +49,7 @@ export default async function Page() {
         highlights={highlights}
         testimonials={testimonials}
         faqs={faqs}
+        categories={categoriesWithVideos}
       />
     );
   } catch (error) {

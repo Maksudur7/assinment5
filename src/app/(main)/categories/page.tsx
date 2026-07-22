@@ -285,7 +285,7 @@ export default function CategoriesPage() {
                   <h3 className="text-white text-xl">Category Results</h3>
                   <Badge className="bg-[#E50914] text-white">{videos.length} titles</Badge>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                   {videos.map((video) => (
                     <VideoCard
                       key={video.id}
@@ -304,7 +304,7 @@ export default function CategoriesPage() {
               Handpicked titles based on popularity and freshness.
             </div>
             <div className="bg-zinc-900 rounded-lg p-6 border border-white/10">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                 {featuredVideos.map((video) => (
                   <VideoCard
                     key={`featured-${video.id}`}
