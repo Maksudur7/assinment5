@@ -4,18 +4,12 @@ import { getAuthToken } from "./portal/storage";
 function normalizeAuthUrl(url: string): string {
   let trimmed = url.replace(/\/+$/, "");
   return trimmed.endsWith("/api/auth") ? trimmed : `${trimmed}/api/auth`;
-}
-
-const BACKEND_AUTH_URL = (() => {
-  if (typeof window === "undefined") {
-    const envUrl = process.env.NEXT_PUBLIC_AUTH_URL || process.env.NEXT_PUBLIC_BETTER_AUTH_URL;
-    if (envUrl && !envUrl.startsWith("/")) {
-      return normalizeAuthUrl(envUrl);
-    }
-    return "https://ngv-backend.vercel.app/api/auth";
-  }
-  return "/api/auth";
-})();
+const BACKEND_AUTH_URL = normalizeAuthUrl(
+  (typeof window === "undefined" ? process.env.BACKEND_AUTH_URL : null) ||
+    process.env.NEXT_PUBLIC_AUTH_URL ||
+    process.env.NEXT_PUBLIC_BETTER_AUTH_URL ||
+    "http://localhost:4000/api/auth"
+);
 
 export const authClient = createAuthClient({
   baseURL: BACKEND_AUTH_URL,
