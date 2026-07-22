@@ -48,8 +48,9 @@ async function call<T>(
   isSilentCheck = false,
 ): Promise<T> {
   const token = getAuthToken();
-  const API_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  const API_URL = typeof window === "undefined"
+    ? (process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api")
+    : "/api";
 
   // Ensure no double slash in URL
   const url = path.startsWith("/") ? `${API_URL}${path}` : `${API_URL}/${path}`;
