@@ -98,21 +98,22 @@ export const authFetchers = {
   },
 
   async socialLogin(provider: SocialProvider) {
-    const callbackURL = typeof window !== "undefined"
-      ? `${window.location.origin}/`
-      : "/";
+    const callbackURL =
+      typeof window !== "undefined" ? `${window.location.origin}/` : "/";
 
-    // Directly return result, not { data, error }
-    const res = await authClient.signIn.social({
+    const res: any = await authClient.signIn.social({
       provider,
       callbackURL,
     });
 
-    // Better Auth will automatically throw error if any (since throw: true)
     if (!res) throw new Error("Social login failed");
 
-    // Save session token (using as any to avoid TypeScript error)
-    const sessionToken = (res as any).token || (res as any).session?.token;
+    const targetUrl = res?.url || res?.data?.url;
+    if (targetUrl && typeof window !== "undefined") {
+      window.location.href = targetUrl;
+    }
+
+    const sessionToken = res.token || res.session?.token;
     if (sessionToken) setAuthToken(sessionToken);
 
     return res;
