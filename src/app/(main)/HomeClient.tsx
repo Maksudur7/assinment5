@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { AdSlot } from "@/src/components/AdSlot";
 import { VideoCard } from "@/src/components/VideoCard";
 import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
-import { CheckCircle2, Info, Mail, Play, Sparkles, TrendingUp, Users } from "lucide-react";
+import { CheckCircle2, Info, Mail, Play, Sparkles, TrendingUp, Users, Film } from "lucide-react";
 
 import { Button } from "@/src/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
@@ -18,6 +18,7 @@ interface HomeClientProps {
   highlights: LandingHighlight[];
   testimonials: LandingTestimonial[];
   faqs: LandingFaq[];
+  categories?: any[];
 }
 
 export function HomeClient({
@@ -27,6 +28,7 @@ export function HomeClient({
   highlights,
   testimonials,
   faqs,
+  categories = [],
 }: HomeClientProps) {
   const router = useRouter();
 
@@ -113,7 +115,7 @@ export function HomeClient({
                   <TrendingUp className="w-6 h-6 text-[#E50914]" />
                   <h2 className="text-foreground text-2xl">Trending Now</h2>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                   {trending.map((media) => (
                     <VideoCard
                       key={media.id}
@@ -132,6 +134,19 @@ export function HomeClient({
               </div>
             )}
 
+            {/* Top Categories */}
+            <div className="mb-12">
+              <h2 className="text-foreground text-2xl mb-6">Top Categories</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                {topGenres.map((genre) => (
+                  <div key={genre.name} className="rounded-lg border border-border bg-card p-4 text-center">
+                    <p className="text-foreground font-medium">{genre.name}</p>
+                    <p className="text-muted-foreground text-xs mt-1">{genre.count} titles</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Category Tabs */}
             <Tabs defaultValue="movies" className="mb-12">
               <TabsList className="bg-card border border-border mb-6">
@@ -148,7 +163,7 @@ export function HomeClient({
 
               <TabsContent value="movies">
                 {trending.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                     {trending.map((media) => (
                       <VideoCard
                         key={media.id}
@@ -171,7 +186,7 @@ export function HomeClient({
 
               <TabsContent value="new">
                 {newReleases.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                     {newReleases.map((media) => (
                       <VideoCard
                         key={media.id}
@@ -194,7 +209,7 @@ export function HomeClient({
 
               <TabsContent value="trending">
                 {trending.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                     {trending.map((media) => (
                       <VideoCard
                         key={media.id}
@@ -229,7 +244,7 @@ export function HomeClient({
                     View All
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                   {newReleases.map((media) => (
                     <VideoCard
                       key={`latest-${media.id}`}
@@ -249,6 +264,35 @@ export function HomeClient({
               </div>
             )}
 
+            {/* Dynamic Category Rows (Netflix style) */}
+            {categories.map((cat: any) => {
+              if (!cat.videos || cat.videos.length === 0) return null;
+              return (
+                <div key={cat.id} className="mb-12">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Film className="w-6 h-6 text-[#E50914]" />
+                    <h2 className="text-foreground text-2xl font-bold">{cat.name}</h2>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                    {cat.videos.map((media: any) => (
+                      <VideoCard
+                        key={`cat-row-${cat.id}-${media.id}`}
+                        id={media.id}
+                        title={media.title}
+                        description={media.synopsis}
+                        thumbnail={media.poster}
+                        duration={media.duration}
+                        rating={media.avgRating}
+                        year={String(media.releaseYear)}
+                        category={media.genres?.[0] || "General"}
+                        onClick={() => router.push(`/watch/${media.id}`)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
             {/* AI Recommendations */}
             {aiPicks.length > 0 && (
               <div className="mb-12 rounded-xl border border-border bg-card p-6">
@@ -256,7 +300,7 @@ export function HomeClient({
                   <Sparkles className="w-5 h-5 text-[#E50914]" />
                   <h2 className="text-foreground text-2xl">Smart Picks For You</h2>
                 </div>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 md:gap-4">
                   {aiPicks.map((media) => (
                     <VideoCard
                       key={`smart-${media.id}`}
@@ -292,18 +336,7 @@ export function HomeClient({
               )}
             </div>
 
-            {/* Top Categories */}
-            <div className="mb-12">
-              <h2 className="text-foreground text-2xl mb-6">Top Categories</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                {topGenres.map((genre) => (
-                  <div key={genre.name} className="rounded-lg border border-border bg-card p-4 text-center">
-                    <p className="text-foreground font-medium">{genre.name}</p>
-                    <p className="text-muted-foreground text-xs mt-1">{genre.count} titles</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+
             
             {/* In-Feed Advertisement */}
             <div className="mb-12">

@@ -84,7 +84,7 @@ function SearchContent() {
               {results.length} result{results.length !== 1 ? "s" : ""} for{" "}
               <span className="text-foreground font-medium">&quot;{q}&quot;</span>
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
               {results.map((item) => (
                 <Link key={item.id} href={`/watch/${item.id}`}>
                   <VideoCard

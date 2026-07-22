@@ -30,7 +30,7 @@ import {
 } from "./ui/dropdown-menu";
 
 import { authClient } from "@/src/lib/auth-client";
-import { getStoredUser, clearStore } from "@/src/lib/portal/storage";
+import { getStoredUser, clearStore, setStoredUser, setAuthToken } from "@/src/lib/portal/storage";
 import { httpPortalService } from "@/src/lib/portal/httpService";
 import { portalService } from "@/src/lib/portal";
 import type { UserRole, MediaItem } from "@/src/lib/portal/types";
@@ -99,7 +99,28 @@ export function Navbar() {
 
   useEffect(() => {
     let mountedLocal = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
+    if (session?.user) {
+      setStoredUser({
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        role: (session.user as any).role || "user",
+      });
+      const token = session.session?.token;
+      if (token) {
+        setAuthToken(token);
+      }
+      if (mountedLocal) {
+        setUser({
+          ...session.user,
+          role: (session.user as any).role || "user",
+        });
+        setLoadingUser(false);
+      }
+      return () => { mountedLocal = false; };
+    }
+
     setLoadingUser(true);
     httpPortalService.getCurrentUser()
       .then((u) => {
@@ -110,12 +131,12 @@ export function Navbar() {
       })
       .catch(() => {
         if (mountedLocal) {
-          setUser(session?.user || getStoredUser() || null);
+          setUser(getStoredUser() || null);
           setLoadingUser(false);
         }
       });
     return () => { mountedLocal = false; };
-  }, [session?.user]);
+  }, [session]);
 
   const currentUser = user;
   const currentUserRole: UserRole = currentUser?.role || "user";
@@ -255,7 +276,15 @@ export function Navbar() {
                   variant="ghost"
                   className="relative h-10 w-10 rounded-full p-0 overflow-hidden bg-accent dark:bg-white/5 border border-border dark:border-white/10 hover:bg-accent/80 dark:hover:bg-white/10"
                 >
-                  <User className="w-5 h-5 text-foreground dark:text-white" />
+                  {currentUser?.image ? (
+                    <img
+                      src={currentUser.image}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-5 h-5 text-foreground dark:text-white" />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
