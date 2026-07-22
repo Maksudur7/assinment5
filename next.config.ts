@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://ngv-backend.vercel.app/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
