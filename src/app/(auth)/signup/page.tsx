@@ -113,16 +113,21 @@ export default function SignupPage() {
               <div className="mx-auto bg-green-500/20 w-16 h-16 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-400" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
-              <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-                We've sent a verification link to <span className="text-white font-medium">{email}</span>.
-                Please verify your email address to activate your account.
+              <h2 className="text-xl font-bold text-white mb-2">Account Created!</h2>
+              <p className="text-zinc-400 text-sm leading-relaxed mb-4">
+                A verification email was requested for <span className="text-white font-medium">{email}</span>.
               </p>
+              <div className="bg-zinc-800/80 border border-white/10 rounded-xl p-3.5 mb-6 text-left text-xs text-zinc-300">
+                <p className="font-semibold text-white mb-1">📌 Note on Email Delivery:</p>
+                <p className="text-zinc-400 leading-normal">
+                  In Resend free developer mode, live inbox delivery requires signing up with the account owner address (<span className="text-amber-400 font-mono">maksudurrahman540@gmail.com</span>) or configuring a custom domain in Resend Dashboard. You can also sign in directly now.
+                </p>
+              </div>
               <Link
                 href="/login"
-                className="inline-block w-full bg-white/10 hover:bg-white/20 text-white font-medium py-3 rounded-xl transition-colors border border-white/10"
+                className="inline-block w-full bg-[#E50914] hover:bg-[#B2070F] text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-red-500/20"
               >
-                Return to Login
+                Proceed to Login
               </Link>
             </div>
           ) : redirectMsg ? (

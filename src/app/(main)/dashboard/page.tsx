@@ -40,10 +40,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { portalService } from "@/src/lib/portal";
 import type { AdminOverview, PortalUser, PurchaseRecord } from "@/src/lib/portal/types";
+import { authClient } from "@/src/lib/auth-client";
 
 const TABLE_PAGE_SIZE = 6;
 
 export default function DashboardPage() {
+  const { data: currentSessionData } = authClient.useSession();
   const [user, setUser] = useState<PortalUser | null>(null);
   const [watchlistCount, setWatchlistCount] = useState(0);
   const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
@@ -53,15 +55,29 @@ export default function DashboardPage() {
     setError("");
     try {
       const me = await portalService.getCurrentUser();
+      const sessionUser = currentSessionData?.user;
+      
+      const currentUser: PortalUser | null = me || (sessionUser ? {
+        id: sessionUser.id,
+        name: sessionUser.name || "User",
+        email: sessionUser.email || "",
+        role: (sessionUser as any).role || "user",
+        image: sessionUser.image || undefined,
+        hasPassword: true,
+      } : null);
+
+      setUser(currentUser);
+
       const [watchlist, overview] = await Promise.all([
-        portalService.getWatchlist(),
-        me?.role === "admin" ? portalService.getAdminOverview() : Promise.resolve(null),
-      ]) as [any[], any];
-      setUser(me);
-      setWatchlistCount(watchlist.length);
+        portalService.getWatchlist().catch(() => []),
+        currentUser?.role === "admin" ? portalService.getAdminOverview().catch(() => null) : Promise.resolve(null),
+      ]);
+
+      const validWatchlist = Array.isArray(watchlist) ? watchlist : [];
+      setWatchlistCount(validWatchlist.length);
       setAdminOverview(overview as AdminOverview | null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+      console.error("Dashboard load error:", err);
       setAdminOverview(null);
     }
   }
@@ -71,7 +87,7 @@ export default function DashboardPage() {
       await load();
     }
     fetchData();
-  }, []);
+  }, [currentSessionData?.user?.id]);
 
   const metricCards = useMemo(
     () => [

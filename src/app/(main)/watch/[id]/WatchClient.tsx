@@ -98,6 +98,7 @@ export function WatchClient({ id }: { id: string }) {
       setAllMedia(list.items as MediaItem[]);
 
       if (item && me) {
+        portalService.addToHistory(item.id).catch(() => {});
         // getReviews now expects 2 arguments: mediaId and includePending
         const rRaw = await portalService.getReviews(item.id, true);
         const r = Array.isArray(rRaw) ? (rRaw as Review[]) : [];
