@@ -7,9 +7,9 @@ function normalizeAuthUrl(url: string): string {
 }
 
 const BACKEND_AUTH_URL = normalizeAuthUrl(
-  process.env.NEXT_PUBLIC_AUTH_URL
-    || process.env.NEXT_PUBLIC_BETTER_AUTH_URL
-    || "https://ngv-backend.vercel.app/api/auth",
+  process.env.NEXT_PUBLIC_AUTH_URL ||
+    process.env.NEXT_PUBLIC_BETTER_AUTH_URL ||
+    "https://ngv-backend.vercel.app/api/auth",
 );
 
 export const authClient = createAuthClient({
@@ -17,8 +17,8 @@ export const authClient = createAuthClient({
   fetchOptions: {
     auth: {
       type: "Bearer",
-      token: () => getAuthToken(), 
+      token: () => getAuthToken(),
     },
     throw: true,
   },
-});
+});
