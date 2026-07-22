@@ -55,6 +55,7 @@ async function call<T>(
   const url = path.startsWith("/") ? `${API_URL}${path}` : `${API_URL}/${path}`;
   const res = await fetch(url, {
     ...init,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -196,6 +197,11 @@ export const httpPortalService = {
       }
     }
   },
+  updateProfile: (name: string, email: string) =>
+    call<PortalUser>("/users/me", {
+      method: "PUT",
+      body: JSON.stringify({ name, email }),
+    }),
   switchUser: (role: UserRole) =>
     call("/dev/switch-user", {
       method: "POST",
@@ -302,6 +308,16 @@ export const httpPortalService = {
     call("/auth/reset-password", {
       method: "POST",
       body: JSON.stringify({ token, newPassword }),
+    }),
+  getSessions: () => call<any[]>("/auth/sessions"),
+  revokeSession: (token: string) =>
+    call("/auth/sessions/revoke", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
+  revokeAllSessions: () =>
+    call("/auth/sessions/revoke-all", {
+      method: "POST",
     }),
   getMedia: (query: MediaQuery = {}) => {
     const qs = new URLSearchParams(

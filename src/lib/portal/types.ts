@@ -7,9 +7,10 @@ export type PortalUser = {
   email: string;
   role: UserRole;
   password?: string;
+  image?: string;
 };
 
-export type SocialProvider = "google" | "facebook" | "github";
+export type SocialProvider = "google" | "facebook";
 
 export type MediaItem = {
   id: string;

@@ -37,10 +37,11 @@ export default function LoginPage() {
       await authFetchers.login(email, password);
       setSuccess("Login successful. Redirecting...");
       window.location.href = "/";
-    } catch (err) {
+    } catch (err: any) {
+      const errorMsg = err.body?.message || err.message || "An error occurred during login.";
       triggerGlobalError({ 
         title: "Login Failed", 
-        message: err instanceof Error ? err.message : "An error occurred during login.", 
+        message: errorMsg, 
         action: "dismiss" 
       });
     } finally {
@@ -48,7 +49,7 @@ export default function LoginPage() {
     }
   }
 
-  async function handleSocial(provider: "google" | "facebook" | "github") {
+  async function handleSocial(provider: "google" | "facebook") {
     setSuccess("");
     setLoading(true);
     try {

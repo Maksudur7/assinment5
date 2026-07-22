@@ -17,7 +17,7 @@ export default function SignupPage() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setSuccess(false);
-    
+
     if (!name.trim() || !email.trim() || !password.trim()) {
       triggerGlobalError({ title: "Required Fields", message: "All fields are required.", action: "dismiss" });
       return;
@@ -33,27 +33,28 @@ export default function SignupPage() {
       await authFetchers.register(name.trim(), email.trim(), password);
       // Do not redirect immediately. Show verification message.
       setSuccess(true);
-    } catch (err) {
-      triggerGlobalError({ 
-        title: "Signup Failed", 
-        message: err instanceof Error ? err.message : "An error occurred during registration.", 
-        action: "dismiss" 
+    } catch (err: any) {
+      const errorMsg = err.body?.message || err.message || "An error occurred during registration.";
+      triggerGlobalError({
+        title: "Signup Failed",
+        message: errorMsg,
+        action: "dismiss"
       });
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleSocial(provider: "google" | "facebook" | "github") {
+  async function handleSocial(provider: "google" | "facebook") {
     setSuccess(false);
     setLoading(true);
     try {
       await authFetchers.socialLogin(provider);
     } catch (err) {
-      triggerGlobalError({ 
-        title: "Social Signup Failed", 
-        message: err instanceof Error ? err.message : "Social signup failed.", 
-        action: "dismiss" 
+      triggerGlobalError({
+        title: "Social Signup Failed",
+        message: err instanceof Error ? err.message : "Social signup failed.",
+        action: "dismiss"
       });
       setLoading(false);
     }
@@ -64,7 +65,7 @@ export default function SignupPage() {
       {/* Cinematic Background Gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(229,9,20,0.15),transparent_50%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_100%,_rgba(255,255,255,0.03),transparent_40%)] pointer-events-none" />
-      
+
       <div className="w-full max-w-md relative z-10">
         {/* Logo Header */}
         <div className="flex justify-center mb-8">
@@ -78,7 +79,7 @@ export default function SignupPage() {
 
         {/* Glassmorphic Auth Card */}
         <div className="bg-zinc-900/60 backdrop-blur-xl rounded-2xl p-8 border border-white/10 shadow-2xl">
-          
+
           <div className="mb-8">
             <h1 className="text-white text-2xl font-bold tracking-tight mb-1">Create Account</h1>
             <p className="text-zinc-400 text-sm">Join NGV and start streaming today</p>
@@ -91,11 +92,11 @@ export default function SignupPage() {
               </div>
               <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
               <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-                We've sent a verification link to <span className="text-white font-medium">{email}</span>. 
+                We've sent a verification link to <span className="text-white font-medium">{email}</span>.
                 Please verify your email address to activate your account.
               </p>
-              <Link 
-                href="/login" 
+              <Link
+                href="/login"
                 className="inline-block w-full bg-white/10 hover:bg-white/20 text-white font-medium py-3 rounded-xl transition-colors border border-white/10"
               >
                 Return to Login
@@ -111,14 +112,14 @@ export default function SignupPage() {
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-[#E50914] transition-colors">
                       <User className="w-5 h-5" />
                     </div>
-                    <input 
+                    <input
                       required
-                      id="name" 
-                      type="text" 
-                      value={name} 
-                      onChange={(e) => setName(e.target.value)} 
-                      placeholder="John Doe" 
-                      className="w-full bg-black/40 border border-white/10 text-white pl-11 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-all placeholder:text-zinc-600" 
+                      id="name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                      className="w-full bg-black/40 border border-white/10 text-white pl-11 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-all placeholder:text-zinc-600"
                     />
                   </div>
                 </div>
@@ -130,14 +131,14 @@ export default function SignupPage() {
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-[#E50914] transition-colors">
                       <Mail className="w-5 h-5" />
                     </div>
-                    <input 
+                    <input
                       required
-                      id="email" 
-                      type="email" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                      placeholder="name@example.com" 
-                      className="w-full bg-black/40 border border-white/10 text-white pl-11 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-all placeholder:text-zinc-600" 
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full bg-black/40 border border-white/10 text-white pl-11 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-all placeholder:text-zinc-600"
                     />
                   </div>
                 </div>
@@ -151,18 +152,18 @@ export default function SignupPage() {
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-[#E50914] transition-colors">
                       <Lock className="w-5 h-5" />
                     </div>
-                    <input 
+                    <input
                       required
-                      id="password" 
-                      type={showPassword ? "text" : "password"} 
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
-                      placeholder="••••••••" 
-                      className="w-full bg-black/40 border border-white/10 text-white pl-11 pr-11 py-2.5 rounded-xl focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-all placeholder:text-zinc-600" 
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-black/40 border border-white/10 text-white pl-11 pr-11 py-2.5 rounded-xl focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-all placeholder:text-zinc-600"
                     />
-                    <button 
-                      type="button" 
-                      onClick={() => setShowPassword((v) => !v)} 
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
                       className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-500 hover:text-white transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -170,10 +171,10 @@ export default function SignupPage() {
                   </div>
                   <p className="text-xs text-zinc-500 pt-1">Must be at least 8 characters long.</p>
                 </div>
-                
+
                 {/* Submit Button */}
-                <button 
-                  disabled={loading} 
+                <button
+                  disabled={loading}
                   className="w-full bg-[#E50914] hover:bg-[#B2070F] disabled:opacity-50 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-red-500/20"
                 >
                   {loading ? "Creating Account..." : "Sign Up"}
@@ -192,9 +193,9 @@ export default function SignupPage() {
 
               {/* Social Logins */}
               <div className="grid grid-cols-2 gap-3">
-                <button 
-                  disabled={loading} 
-                  onClick={() => void handleSocial("google")} 
+                <button
+                  disabled={loading}
+                  onClick={() => void handleSocial("google")}
                   className="flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-200 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
                 >
                   {/* Simple Google SVG Icon */}
@@ -206,9 +207,9 @@ export default function SignupPage() {
                   </svg>
                   Google
                 </button>
-                <button 
-                  disabled={loading} 
-                  onClick={() => void handleSocial("facebook")} 
+                <button
+                  disabled={loading}
+                  onClick={() => void handleSocial("facebook")}
                   className="flex items-center justify-center gap-2 bg-[#1877F2] hover:bg-[#166FE5] text-white py-2.5 rounded-xl text-sm font-bold border border-white/10 transition-colors shadow-sm disabled:opacity-50"
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
