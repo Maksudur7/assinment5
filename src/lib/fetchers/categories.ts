@@ -82,7 +82,16 @@ export async function fetchCategoryVideos(
     videos = data.items || [];
   }
 
-  return sortVideos(videos, sort as CategorySort);
+  const normalized = (videos || []).map((item: any) => ({
+    ...item,
+    thumbnail: item.thumbnail || item.poster || "",
+    rating: item.rating ?? item.avgRating ?? 0,
+    year: String(item.year || item.releaseYear || ""),
+    description: item.description || item.synopsis || "",
+    category: item.category || item.genres?.[0] || "General",
+  }));
+
+  return sortVideos(normalized, sort as CategorySort);
 }
 
 export async function fetchCategoryHighlights() {

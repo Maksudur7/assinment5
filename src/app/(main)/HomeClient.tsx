@@ -44,6 +44,13 @@ export function HomeClient({
   }, [trending, newReleases]);
 
   const topGenres = useMemo(() => {
+    if (Array.isArray(categories) && categories.length > 0) {
+      return categories.map((cat: any) => ({
+        name: cat.name || cat.label,
+        count: Array.isArray(cat.videos) ? cat.videos.length : (cat.mediaCount || cat._count?.media || 0),
+      }));
+    }
+
     const freq = new Map<string, number>();
     [...trending, ...newReleases].forEach((item) => {
       item.genres?.forEach((genre) => {
@@ -53,9 +60,19 @@ export function HomeClient({
 
     return Array.from(freq.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
+      .slice(0, 12)
       .map(([name, count]) => ({ name, count }));
-  }, [trending, newReleases]);
+  }, [categories, trending, newReleases]);
+
+  const handleCategoryClick = (categoryName: string) => {
+    const slug = String(categoryName || "").toLowerCase().trim().replace(/\s+/g, "-");
+    const element = document.getElementById(`category-${slug}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      router.push(`/categories?category=${encodeURIComponent(categoryName)}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pt-20">
@@ -136,11 +153,20 @@ export function HomeClient({
 
             {/* Top Categories */}
             <div className="mb-12">
-              <h2 className="text-foreground text-2xl mb-6">Top Categories</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-foreground text-2xl">Top Categories</h2>
+                <Button variant="link" className="text-[#E50914] p-0 h-auto font-bold text-sm" onClick={() => router.push("/categories")}>
+                  View All ({topGenres.length})
+                </Button>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {topGenres.map((genre) => (
-                  <div key={genre.name} className="rounded-lg border border-border bg-card p-4 text-center">
-                    <p className="text-foreground font-medium">{genre.name}</p>
+                  <div
+                    key={genre.name}
+                    onClick={() => handleCategoryClick(genre.name)}
+                    className="rounded-lg border border-border bg-card p-4 text-center cursor-pointer hover:border-[#E50914] hover:bg-card/80 hover:scale-[1.02] transition-all group shadow-xs"
+                  >
+                    <p className="text-foreground font-semibold group-hover:text-[#E50914] transition-colors">{genre.name}</p>
                     <p className="text-muted-foreground text-xs mt-1">{genre.count} titles</p>
                   </div>
                 ))}
@@ -266,17 +292,28 @@ export function HomeClient({
 
             {/* Dynamic Category Rows (Netflix style) */}
             {categories.map((cat: any) => {
+              const catName = cat.name || cat.label || "";
+              const catSlug = catName.toLowerCase().trim().replace(/\s+/g, "-");
               if (!cat.videos || cat.videos.length === 0) return null;
               return (
-                <div key={cat.id} className="mb-12">
-                  <div className="flex items-center gap-2 mb-6">
-                    <Film className="w-6 h-6 text-[#E50914]" />
-                    <h2 className="text-foreground text-2xl font-bold">{cat.name}</h2>
+                <div key={cat.id || catSlug} id={`category-${catSlug}`} className="mb-12 scroll-mt-24">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <Film className="w-6 h-6 text-[#E50914]" />
+                      <h2 className="text-foreground text-2xl font-bold">{catName}</h2>
+                    </div>
+                    <Button
+                      variant="link"
+                      className="text-[#E50914] p-0 h-auto font-semibold text-sm"
+                      onClick={() => router.push(`/categories?category=${encodeURIComponent(catName)}`)}
+                    >
+                      See All
+                    </Button>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                     {cat.videos.map((media: any) => (
                       <VideoCard
-                        key={`cat-row-${cat.id}-${media.id}`}
+                        key={`cat-row-${cat.id || catSlug}-${media.id}`}
                         id={media.id}
                         title={media.title}
                         description={media.synopsis}

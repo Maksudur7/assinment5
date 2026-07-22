@@ -27,7 +27,7 @@ export default async function Page() {
       (categories || []).map(async (cat: any) => {
         try {
           const videos = await fetchFromAPI(`/categories/${encodeURIComponent(cat.name)}/videos`);
-          return { ...cat, videos: videos || [] };
+          return { ...cat, videos: Array.isArray(videos) ? videos : [] };
         } catch (e) {
           return { ...cat, videos: [] };
         }
