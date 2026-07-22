@@ -282,11 +282,17 @@ export const httpPortalService = {
   logout: async (): Promise<void> => {
     await authClient.signOut();
   },
-  socialLogin: (provider: SocialProvider) =>
-    call("/auth/social/signin", {
-      method: "POST",
-      body: JSON.stringify({ provider }),
-    }),
+  socialLogin: async (provider: SocialProvider) => {
+    const callbackURL = typeof window !== "undefined"
+      ? `${window.location.origin}/`
+      : "https://ngv-black.vercel.app/";
+
+    const res = await authClient.signIn.social({
+      provider,
+      callbackURL,
+    });
+    return res as any;
+  },
   requestPasswordReset: (email: string) =>
     call("/auth/forgot-password", {
       method: "POST",
