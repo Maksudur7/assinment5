@@ -15,12 +15,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const pathname = usePathname();
 
   // Synchronously check on initial client render frame
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(() => {
-    if (typeof window === "undefined") return null;
-    const token = getAuthToken();
-    const storedUser = getStoredUser();
-    return !!(token || storedUser);
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
     let isMounted = true;
