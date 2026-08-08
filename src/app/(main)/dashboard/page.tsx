@@ -108,7 +108,7 @@ export default function DashboardPage() {
       return [
         ...base,
         { href: "/admin", label: "Admin Console", icon: Shield },
-        { href: "/api-spec", label: "Reports", icon: BarChart3 },
+        { href: "/admin?tab=reports", label: "Reports", icon: BarChart3 },
       ];
     }
     return base;

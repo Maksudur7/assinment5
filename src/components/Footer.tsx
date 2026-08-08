@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Eye, Lock, Shield } from "lucide-react";
 
 import { Badge } from "./ui/badge";
+import { NGVLogo } from "./ui/NGVLoader";
 
 export function Footer() {
   return (
@@ -20,7 +21,7 @@ export function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <div className="bg-primary px-4 py-2 rounded">
-                <span className="text-primary-foreground tracking-wider">NGV</span>
+                <NGVLogo size="sm" />
               </div>
             </div>
             <p className="text-muted-foreground mb-4">
@@ -60,7 +61,7 @@ export function Footer() {
             <ul className="space-y-2 text-muted-foreground">
               <li><Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link></li>
               <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
-              <li><Link href="/api-spec" className="hover:text-foreground transition-colors">API Contract</Link></li>
+              <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
         </div>

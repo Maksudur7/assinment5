@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
-import { MessageCircle, ShieldAlert, ThumbsUp, Eye, Users, PlayCircle, Loader2 } from "lucide-react";
+import { MessageCircle, ShieldAlert, ThumbsUp, Eye, Users, PlayCircle, Loader2, MoreHorizontal, Bookmark, BookmarkCheck } from "lucide-react";
 import Hls from "hls.js";
 import dynamic from "next/dynamic";
 
@@ -73,10 +73,12 @@ export function WatchClient({ id }: { id: string }) {
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [replyTarget, setReplyTarget] = useState<Record<string, string | null>>({});
   const [watchSaved, setWatchSaved] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   // Real-time view/user count
   const [viewCount, setViewCount] = useState<number>(0);
   const [userCount, setUserCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [lastSavedTime, setLastSavedTime] = useState(0);
 
@@ -121,6 +123,8 @@ export function WatchClient({ id }: { id: string }) {
         const watchlist = Array.isArray(watchlistRaw) ? (watchlistRaw as MediaItem[]) : [];
         setWatchSaved((watchlist as MediaItem[]).some((w: MediaItem) => w && w.id === item.id));
       }
+    } catch (err: any) {
+      setError(err?.message || "Failed to connect to the server.");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -139,7 +143,6 @@ export function WatchClient({ id }: { id: string }) {
           setUserCount(stats.currentViewers);
         }
       });
-      portalService.addToHistory(id).catch(console.error);
     }
 
     // Connect Server-Sent Events (SSE) for real-time stats
@@ -324,6 +327,10 @@ export function WatchClient({ id }: { id: string }) {
     );
   }
 
+  if (error) {
+    return <div className="min-h-screen bg-black pt-24 text-center text-red-500">Error: {error}</div>;
+  }
+
   if (!media) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Media not found.</div>;
   }
@@ -340,81 +347,106 @@ export function WatchClient({ id }: { id: string }) {
 
   return (
     <div className="min-h-screen bg-black pt-20">
-      <div className="max-w-360 mx-auto px-0 lg:px-6 py-6 grid lg:grid-cols-[1fr_360px] gap-6">
+      <div className="max-w-360 mx-auto px-0 lg:px-6 py-1 grid lg:grid-cols-[1fr_360px] gap-6">
         <div className="space-y-6">
-          <div className="rounded-lg overflow-hidden  border border-white/10 bg-zinc-900">
-            {/* Real-time stats */}
-            <div className="flex items-center gap-6 px-5 pt-4 pb-2 border-b border-white/5">
-              <span className="text-white/80 text-sm flex items-center gap-2"><Eye className="w-4 h-4" /> {viewCount} views</span>
-              <span className="text-white/80 text-sm flex items-center gap-2 text-green-400"><Users className="w-4 h-4" /> {userCount} watching now</span>
+          <div className="rounded-b-lg overflow-hidden border border-white/10 bg-zinc-900">
+            <div className="relative group">
+              {/* Real-time stats (Overlay) */}
+              <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-6 px-4 py-3 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <span className="text-white/90 text-sm flex items-center gap-2 drop-shadow-md"><Eye className="w-4 h-4" /> {viewCount} views</span>
+                <span className="text-green-400 text-sm flex items-center gap-2 drop-shadow-md font-medium"><Users className="w-4 h-4" /> {userCount} watching now</span>
+              </div>
+
+              {youTubeEmbedUrl ? (
+                <div className="w-full aspect-video bg-black flex items-center justify-center">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={youTubeEmbedUrl}
+                    title={media.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                </div>
+              ) : (
+                <div className="w-full aspect-video bg-black [&_.plyr]:h-full [&_.plyr]:w-full [&_.plyr--video]:aspect-video">
+                  <PlyrPlayer
+                    source={{
+                      type: "video" as const,
+                      sources: [
+                        {
+                          src: media.streamingUrl,
+                          type: media.streamingUrl.endsWith(".m3u8")
+                            ? "application/x-mpegURL"
+                            : "video/mp4",
+                        },
+                      ],
+                      poster: media.poster,
+                      title: media.title,
+                    }}
+                    options={{
+                      controls: [
+                        "play-large",
+                        "rewind",
+                        "play",
+                        "fast-forward",
+                        "progress",
+                        "current-time",
+                        "duration",
+                        "mute",
+                        "volume",
+                        "settings",
+                        "pip",
+                        "fullscreen",
+                      ],
+                      settings: ["quality", "speed", "loop"],
+                      speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+                      keyboard: { global: false, focused: true },
+                      tooltips: { controls: true, seek: true },
+                    }}
+                  />
+                </div>
+              )}
             </div>
-            {youTubeEmbedUrl ? (
-              <div className="w-full aspect-video bg-black flex items-center justify-center">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  src={youTubeEmbedUrl}
-                  title={media.title}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
-              </div>
-            ) : (
-              <div className="w-full aspect-video bg-black [&_.plyr]:h-full [&_.plyr]:w-full [&_.plyr--video]:aspect-video">
-                <PlyrPlayer
-                  source={{
-                    type: "video" as const,
-                    sources: [
-                      {
-                        src: media.streamingUrl,
-                        type: media.streamingUrl.endsWith(".m3u8")
-                          ? "application/x-mpegURL"
-                          : "video/mp4",
-                      },
-                    ],
-                    poster: media.poster,
-                    title: media.title,
-                  }}
-                  options={{
-                    controls: [
-                      "play-large",
-                      "rewind",
-                      "play",
-                      "fast-forward",
-                      "progress",
-                      "current-time",
-                      "duration",
-                      "mute",
-                      "volume",
-                      "settings",
-                      "pip",
-                      "fullscreen",
-                    ],
-                    settings: ["quality", "speed", "loop"],
-                    speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
-                    keyboard: { global: false, focused: true },
-                    tooltips: { controls: true, seek: true },
-                  }}
-                />
-              </div>
-            )}
-            <div className="p-5">
-              <h1 className="text-white text-3xl mb-2">{media.title}</h1>
-              <p className="text-white/70 mb-2">{media.releaseYear} • {media.genres.join(" • ")} • {media.duration}</p>
-              <p className="text-white/70 mb-4">Director: {media.director} • Cast: {media.cast.join(", ")}</p>
-              <p className="text-white/80 mb-4">{media.synopsis}</p>
-
-              <div className="flex flex-wrap gap-2 mb-4">
-                {media.platforms.map((p) => <Badge key={p} variant="outline" className="border-white/20 text-white">{p}</Badge>)}
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white" onClick={toggleWatchlist}>
-                  {watchSaved ? "Remove from Watchlist" : "Add to Watchlist"}
+            <div className="p-3">
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <h1 className="text-white text-2xl sm:text-3xl font-semibold">{media.title}</h1>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/10 shrink-0"
+                  onClick={toggleWatchlist}
+                  title={watchSaved ? "Remove from Watchlist" : "Add to Watchlist"}
+                >
+                  {watchSaved ? <BookmarkCheck className="w-6 h-6 text-[#E50914]" /> : <Bookmark className="w-6 h-6" />}
                 </Button>
               </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/70 hover:text-white hover:bg-white/10"
+                  onClick={() => setShowDetails(!showDetails)}
+                  title="Toggle Details"
+                >
+                  <MoreHorizontal className="w-6 h-6" />
+                </Button>
+              </div>
+
+              {showDetails && (
+                <div className="space-y-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                  <p className="text-white/70">{media.releaseYear} • {media.genres.join(" • ")} • {media.duration}</p>
+                  <p className="text-white/70">Director: {media.director} • Cast: {media.cast.join(", ")}</p>
+                  <p className="text-white/80">{media.synopsis}</p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {media.platforms.map((p) => <Badge key={p} variant="outline" className="border-white/20 text-white">{p}</Badge>)}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -265,7 +265,20 @@ export function HomeClient({
                 See All <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
-            <MediaCarousel>
+            <MediaCarousel
+              compactCards={trending.map((media) => (
+                <VideoCard
+                  key={`compact-tr-${media.id}`}
+                  id={media.id}
+                  title={media.title}
+                  thumbnail={media.poster}
+                  year={String(media.releaseYear)}
+                  category={media.genres?.[0] || "General"}
+                  compact
+                  onClick={() => router.push(`/watch/${media.id}`)}
+                />
+              ))}
+            >
               {trending.map((media) => (
                 <VideoCard
                   key={media.id}
@@ -329,7 +342,20 @@ export function HomeClient({
 
             <TabsContent value="movies">
               {trending.length > 0 ? (
-                <MediaCarousel>
+                <MediaCarousel
+                  compactCards={trending.map((media) => (
+                    <VideoCard
+                      key={`cm-movies-${media.id}`}
+                      id={media.id}
+                      title={media.title}
+                      thumbnail={media.poster}
+                      year={String(media.releaseYear)}
+                      category={media.genres?.[0] || "General"}
+                      compact
+                      onClick={() => router.push(`/watch/${media.id}`)}
+                    />
+                  ))}
+                >
                   {trending.map((media) => (
                     <VideoCard
                       key={media.id}
@@ -352,7 +378,21 @@ export function HomeClient({
 
             <TabsContent value="new">
               {newReleases.length > 0 ? (
-                <MediaCarousel>
+                <MediaCarousel
+                  compactCards={newReleases.map((media) => (
+                    <VideoCard
+                      key={`cm-new-${media.id}`}
+                      id={media.id}
+                      title={media.title}
+                      thumbnail={media.poster}
+                      year={String(media.releaseYear)}
+                      category={media.genres?.[0] || "General"}
+                      isNew
+                      compact
+                      onClick={() => router.push(`/watch/${media.id}`)}
+                    />
+                  ))}
+                >
                   {newReleases.map((media) => (
                     <VideoCard
                       key={media.id}
@@ -376,7 +416,20 @@ export function HomeClient({
 
             <TabsContent value="trending">
               {trending.length > 0 ? (
-                <MediaCarousel>
+                <MediaCarousel
+                  compactCards={trending.map((media) => (
+                    <VideoCard
+                      key={`cm-tr-tab-${media.id}`}
+                      id={media.id}
+                      title={media.title}
+                      thumbnail={media.poster}
+                      year={String(media.releaseYear)}
+                      category={media.genres?.[0] || "General"}
+                      compact
+                      onClick={() => router.push(`/watch/${media.id}`)}
+                    />
+                  ))}
+                >
                   {trending.map((media) => (
                     <VideoCard
                       key={media.id}
@@ -412,7 +465,21 @@ export function HomeClient({
                 View All <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
-            <MediaCarousel>
+            <MediaCarousel
+              compactCards={newReleases.map((media) => (
+                <VideoCard
+                  key={`cm-latest-${media.id}`}
+                  id={media.id}
+                  title={media.title}
+                  thumbnail={media.poster}
+                  year={String(media.releaseYear)}
+                  category={media.genres?.[0] || "General"}
+                  isNew
+                  compact
+                  onClick={() => router.push(`/watch/${media.id}`)}
+                />
+              ))}
+            >
               {newReleases.map((media) => (
                 <VideoCard
                   key={`latest-${media.id}`}
@@ -452,7 +519,20 @@ export function HomeClient({
                   See All <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
-              <MediaCarousel>
+              <MediaCarousel
+                compactCards={cat.videos.map((media: any) => (
+                  <VideoCard
+                    key={`cm-cat-row-${cat.id || catSlug}-${media.id}`}
+                    id={media.id}
+                    title={media.title}
+                    thumbnail={media.poster}
+                    year={String(media.releaseYear)}
+                    category={media.genres?.[0] || "General"}
+                    compact
+                    onClick={() => router.push(`/watch/${media.id}`)}
+                  />
+                ))}
+              >
                 {cat.videos.map((media: any) => (
                   <VideoCard
                     key={`cat-row-${cat.id || catSlug}-${media.id}`}
@@ -479,7 +559,20 @@ export function HomeClient({
               <Sparkles className="w-5 h-5 text-[#E50914]" />
               <h2 className="text-foreground text-2xl font-bold">Smart Picks For You</h2>
             </div>
-            <MediaCarousel>
+            <MediaCarousel
+              compactCards={aiPicks.map((media) => (
+                <VideoCard
+                  key={`cm-smart-${media.id}`}
+                  id={media.id}
+                  title={media.title}
+                  thumbnail={media.poster}
+                  year={String(media.releaseYear)}
+                  category={media.genres?.[0] || "General"}
+                  compact
+                  onClick={() => router.push(`/watch/${media.id}`)}
+                />
+              ))}
+            >
               {aiPicks.map((media) => (
                 <VideoCard
                   key={`smart-${media.id}`}
