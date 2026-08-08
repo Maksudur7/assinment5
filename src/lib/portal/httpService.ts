@@ -53,6 +53,9 @@ async function call<T>(
     if (envUrl && envUrl.trim() !== "") {
       return envUrl.replace(/\/+$/, "");
     }
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}/api`;
+    }
     return "https://ngv-backend.vercel.app/api";
   })();
 

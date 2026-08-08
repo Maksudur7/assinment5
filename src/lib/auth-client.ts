@@ -14,6 +14,9 @@ const BACKEND_AUTH_URL = (() => {
   if (envUrl && envUrl.trim() !== "") {
     return normalizeAuthUrl(envUrl);
   }
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api/auth`;
+  }
   return "https://ngv-backend.vercel.app/api/auth";
 })();
 
