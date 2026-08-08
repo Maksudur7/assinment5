@@ -12,6 +12,7 @@ import {
   User,
   Home,
   Film,
+  History,
   LayoutDashboard,
   Shield,
   X,
@@ -32,13 +33,14 @@ import {
 } from "./ui/dropdown-menu";
 
 import { authClient } from "@/src/lib/auth-client";
-import { getStoredUser, clearStore, setStoredUser, setAuthToken } from "@/src/lib/portal/storage";
+import { getStoredUser, getAuthToken, clearStore, setStoredUser, setAuthToken } from "@/src/lib/portal/storage";
 import { httpPortalService } from "@/src/lib/portal/httpService";
 import { portalService } from "@/src/lib/portal";
 import type { MediaItem } from "@/src/lib/portal/types";
 import { cn } from "./ui/utils";
 import { NotificationCenter } from "./NotificationCenter";
 import { NGVLogo } from "./ui/NGVLoader";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -66,14 +68,14 @@ export function Navbar() {
         setIsSearching(true);
         searchDebounceRef.current = setTimeout(async () => {
           try {
-            const results = await (portalService as any).searchMedia(val.trim());
-            setLiveResults(results.slice(0, 5));
+            const results = await httpPortalService.searchMedia(val.trim());
+            setLiveResults(results.slice(0, 6));
           } catch (error) {
-            console.error(error);
+            console.error("Search error:", error);
           } finally {
             setIsSearching(false);
           }
-        }, 400);
+        }, 300);
       } else {
         setShowDropdown(false);
         setLiveResults([]);
@@ -101,49 +103,44 @@ export function Navbar() {
   useEffect(() => {
     let mountedLocal = true;
 
-    if (session?.session?.token) {
-      setAuthToken(session.session.token);
+    // Fast initial check from storage
+    const stored = getStoredUser();
+    if (stored) {
+      setUser(stored);
+      setLoadingUser(false);
+    } else {
+      setLoadingUser(false);
     }
 
-    setLoadingUser(true);
-    httpPortalService.getCurrentUser()
-      .then((u) => {
-        if (mountedLocal && u) {
-          setUser(u);
-          setStoredUser({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: u.role,
-            image: u.image,
-          });
-          setLoadingUser(false);
-        } else if (mountedLocal && session?.user) {
-          const sessionRole = (session.user as any).role || getStoredUser()?.role || "user";
-          setUser({
-            ...session.user,
-            role: sessionRole,
-          });
-          setLoadingUser(false);
-        }
-      })
-      .catch(() => {
-        if (mountedLocal) {
-          const stored = getStoredUser();
-          if (stored) {
-            setUser(stored);
-          } else if (session?.user) {
-            const sessionRole = (session.user as any).role || "user";
-            setUser({
-              ...session.user,
-              role: sessionRole,
+    const token = getAuthToken();
+    if (token || session?.session?.token) {
+      httpPortalService.getCurrentUser()
+        .then((u) => {
+          if (mountedLocal && u && u.id) {
+            setUser(u);
+            setStoredUser({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              role: u.role,
+              image: u.image,
             });
-          } else {
+          }
+        })
+        .catch(() => {
+          if (mountedLocal) {
             setUser(null);
           }
-          setLoadingUser(false);
-        }
-      });
+        })
+        .finally(() => {
+          if (mountedLocal) setLoadingUser(false);
+        });
+    } else {
+      if (mountedLocal) {
+        setUser(null);
+        setLoadingUser(false);
+      }
+    }
 
     return () => {
       mountedLocal = false;
@@ -171,6 +168,7 @@ export function Navbar() {
   const navItems = [
     { name: "Home", href: "/", icon: Home },
     { name: "All Titles", href: "/library", icon: Film },
+    { name: "History", href: "/history", icon: History },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     ...(mounted && isAdmin ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
   ];
@@ -240,29 +238,48 @@ export function Navbar() {
 
               {/* Live Search Dropdown */}
               {showDropdown && (
-                <div className="absolute top-12 right-0 w-64 bg-background dark:bg-zinc-950 border border-border dark:border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute top-12 right-0 w-80 sm:w-96 bg-background dark:bg-zinc-950 border border-border dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in-50 zoom-in-95 duration-200">
                   {isSearching ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">Searching...</div>
                   ) : liveResults.length > 0 ? (
-                    <div className="py-2">
+                    <div className="py-2 divide-y divide-border/50 dark:divide-white/5">
                       {liveResults.map((item) => (
                         <Link
                           key={item.id}
                           href={`/watch/${item.id}`}
                           onClick={() => setShowDropdown(false)}
-                          className="flex flex-col px-4 py-2 hover:bg-accent dark:hover:bg-white/5 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent dark:hover:bg-white/5 transition-colors group"
                         >
-                          <span className="text-sm font-medium text-foreground dark:text-white truncate">{item.title}</span>
-                          <span className="text-xs text-muted-foreground">{item.releaseYear} • {item.genres[0]}</span>
+                          {/* Thumbnail / Poster Image */}
+                          <div className="w-10 h-14 rounded-lg overflow-hidden bg-zinc-900 shrink-0 border border-border dark:border-white/10 relative">
+                            <ImageWithFallback
+                              src={item.poster}
+                              alt={item.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold text-foreground dark:text-white truncate group-hover:text-primary dark:group-hover:text-red-500 transition-colors">
+                              {item.title}
+                            </h4>
+                            <p className="text-xs text-muted-foreground dark:text-zinc-400 truncate mt-0.5">
+                              {item.releaseYear} • {item.genres?.[0] || "General"}
+                            </p>
+                            {item.duration && (
+                              <span className="text-[10px] text-zinc-500 block mt-0.5">{item.duration}</span>
+                            )}
+                          </div>
                         </Link>
                       ))}
-                      <div className="border-t border-border dark:border-white/10 mt-2">
+                      <div className="pt-2 px-2">
                         <Link 
                           href={`/search?q=${encodeURIComponent(searchQuery)}`}
                           onClick={() => setShowDropdown(false)}
-                          className="block px-4 py-2 text-xs font-semibold text-center text-primary dark:text-red-500 hover:underline"
+                          className="block py-2 text-xs font-bold text-center text-primary dark:text-red-500 hover:underline bg-primary/5 dark:bg-red-500/10 rounded-xl transition-colors"
                         >
-                          View All Results
+                          View All Results ({liveResults.length}+)
                         </Link>
                       </div>
                     </div>
@@ -293,45 +310,87 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-56 bg-background dark:bg-zinc-950 border-border dark:border-white/10 text-foreground dark:text-white p-2"
+                className="w-64 bg-background dark:bg-zinc-950 border-border dark:border-white/10 text-foreground dark:text-white p-3 rounded-2xl shadow-2xl z-50 animate-in fade-in-50 zoom-in-95 duration-200"
               >
-                <div className="px-2 py-1.5 mb-2 border-b border-border dark:border-white/5">
-                  <p className="text-xs text-muted-foreground dark:text-white/40 uppercase tracking-widest font-semibold">
-                    Account
-                  </p>
-                  <p className="text-sm font-medium truncate">
-                    {loadingUser ? "Loading..." : (currentUser?.name || "Guest")}
-                  </p>
-                </div>
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link href="/profile">Profile</Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link href="/watchlist">Watchlist</Link>
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem
-                    asChild
-                    className="text-red-500 focus:text-red-600 cursor-pointer font-semibold"
-                  >
-                    <Link href="/admin">Admin Console</Link>
-                  </DropdownMenuItem>
-                )}
-                <div className="h-px bg-border dark:bg-white/10 my-1" />
                 {currentUser ? (
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    className="text-red-500 focus:bg-red-500/10 cursor-pointer"
-                  >
-                    Logout
-                  </DropdownMenuItem>
-                ) : loadingUser ? (
-                  <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
+                  <>
+                    <div className="px-2 py-2 mb-2 border-b border-border dark:border-white/10">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-foreground dark:text-white truncate">
+                          {currentUser.name}
+                        </p>
+                        <span className={cn(
+                          "text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border",
+                          isAdmin ? "bg-red-500/20 text-red-500 border-red-500/30" : "bg-accent text-muted-foreground border-border"
+                        )}>
+                          {isAdmin ? "Admin" : "Member"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground dark:text-zinc-400 truncate mt-0.5">
+                        {currentUser.email}
+                      </p>
+                    </div>
+
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl font-medium">
+                      <Link href="/profile" className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>Profile & Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl font-medium">
+                      <Link href="/watchlist" className="flex items-center gap-2">
+                        <Film className="w-4 h-4 text-muted-foreground" />
+                        <span>My Watchlist</span>
+                      </Link>
+                    </DropdownMenuItem>
+
+                    {isAdmin && (
+                      <DropdownMenuItem
+                        asChild
+                        className="text-red-500 focus:text-red-600 focus:bg-red-500/10 cursor-pointer rounded-xl font-bold"
+                      >
+                        <Link href="/admin" className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-red-500" />
+                          <span>Admin Console</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+
+                    <div className="h-px bg-border dark:bg-white/10 my-2" />
+
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="text-red-500 focus:bg-red-500/10 cursor-pointer rounded-xl font-bold flex items-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Log Out</span>
+                    </DropdownMenuItem>
+                  </>
                 ) : (
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/login">Login</Link>
-                  </DropdownMenuItem>
+                  <div className="p-2 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-1">
+                      <User className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground dark:text-white">Welcome to NGV</h4>
+                      <p className="text-xs text-muted-foreground dark:text-zinc-400 mt-0.5">
+                        Sign in to watch movies, series & save watchlist
+                      </p>
+                    </div>
+                    <Link
+                      href="/login"
+                      className="block w-full bg-[#E50914] hover:bg-[#B2070F] text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-red-600/30"
+                    >
+                      Sign In Now
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="block text-xs font-semibold text-muted-foreground hover:text-foreground dark:hover:text-white transition-colors"
+                    >
+                      Don't have an account? <span className="text-red-500 underline">Sign Up</span>
+                    </Link>
+                  </div>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -413,18 +472,65 @@ export function Navbar() {
                 </div>
               )}
 
-              {/* Mobile Search Box */}
-              <div className="space-y-2">
+              {/* Mobile Search Box with Live Dropdown */}
+              <div className="space-y-2 relative">
                 <div className="flex items-center gap-2 bg-zinc-900/80 rounded-xl px-3.5 py-2 border border-white/10 focus-within:border-red-500 transition-all">
                   <Search className="w-4 h-4 text-zinc-400" />
                   <Input
                     placeholder="Search movies, shows..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={handleSearchChange}
                     onKeyDown={handleSearchSubmit}
                     className="bg-transparent border-0 text-sm text-white placeholder:text-zinc-500 focus-visible:ring-0 h-8 w-full p-0"
                   />
                 </div>
+                {/* Live Results Dropdown for Mobile */}
+                {showDropdown && (
+                  <div className="absolute left-0 right-0 top-12 bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+                    {isSearching ? (
+                      <div className="p-3 text-center text-sm text-zinc-400">Searching...</div>
+                    ) : liveResults.length > 0 ? (
+                      <div className="py-2 divide-y divide-white/5">
+                        {liveResults.map((item) => (
+                          <Link
+                            key={item.id}
+                            href={`/watch/${item.id}`}
+                            onClick={() => { setShowDropdown(false); setMobileMenuOpen(false); }}
+                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors group"
+                          >
+                            {/* Thumbnail / Poster Image */}
+                            <div className="w-10 h-14 rounded-lg overflow-hidden bg-zinc-900 shrink-0 border border-white/10 relative">
+                              <ImageWithFallback
+                                src={item.poster}
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-bold text-white truncate block group-hover:text-red-400 transition-colors">
+                                {item.title}
+                              </span>
+                              <span className="text-xs text-zinc-400 block mt-0.5">
+                                {item.releaseYear} • {item.genres?.[0] || "General"}
+                              </span>
+                            </div>
+                          </Link>
+                        ))}
+                        <div className="pt-2 px-2">
+                          <Link
+                            href={`/search?q=${encodeURIComponent(searchQuery)}`}
+                            onClick={() => { setShowDropdown(false); setMobileMenuOpen(false); }}
+                            className="block py-2 text-xs font-bold text-center text-red-400 hover:underline bg-red-500/10 rounded-xl"
+                          >
+                            View All Results
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 text-center text-sm text-zinc-400">No results found</div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Navigation Items */}

@@ -47,6 +47,7 @@ export function Footer() {
             <ul className="space-y-2 text-muted-foreground">
               <li><Link href="/" className="hover:text-foreground transition-colors">Home</Link></li>
               <li><a href="/library" className="hover:text-foreground transition-colors">All Titles</a></li>
+              <li><Link href="/history" className="hover:text-foreground transition-colors">Watch History</Link></li>
               <li><Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link></li>
               <li><Link href="/watchlist" className="hover:text-foreground transition-colors">Watchlist</Link></li>
               <li><Link href="/profile" className="hover:text-foreground transition-colors">Profile</Link></li>

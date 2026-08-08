@@ -36,21 +36,24 @@ function sortVideos(
   }
 }
 
-export async function fetchCategories(): Promise<CategoryItem[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-  const res = await fetch(`${apiUrl}/categories`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to fetch categories");
-  // Assuming backend returns [{ name: string, ... }]
-  const data = await res.json();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return data.map((cat: any) => ({
-    slug: cat.name.toLowerCase().replace(/\s+/g, "-"),
-    label: cat.name,
-    count: cat._count?.media || cat.mediaCount || 0,
-  }));
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+export async function fetchCategories(): Promise<CategoryItem[]> {
+  try {
+    const res = await fetch(`${API_URL}/categories`, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to fetch categories");
+    const data = await res.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return data.map((cat: any) => ({
+      slug: cat.name.toLowerCase().replace(/\s+/g, "-"),
+      label: cat.name,
+      count: cat._count?.media || cat.mediaCount || 0,
+    }));
+  } catch (err) {
+    console.error("fetchCategories error:", err);
+    return [];
+  }
+}
 
 export async function fetchCategoryVideos(
   filters: CategoryFilters = {},
@@ -62,16 +65,15 @@ export async function fetchCategoryVideos(
     sort = "trending",
   } = filters;
 
-  let videos: CatalogVideo[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let videos: any[] = [];
 
   if (category !== "all") {
-    // Full path logic
     const url = `${API_URL}/categories/${encodeURIComponent(category)}/videos`;
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("Failed");
     videos = await res.json();
   } else {
-    // API_URL e already /api ache, tai ekhane extra /api hobe na
     const params = new URLSearchParams();
     if (query) params.append("search", query);
     if (language !== "all") params.append("language", language);
@@ -82,6 +84,7 @@ export async function fetchCategoryVideos(
     videos = data.items || [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const normalized = (videos || []).map((item: any) => ({
     ...item,
     thumbnail: item.thumbnail || item.poster || "",
@@ -96,7 +99,6 @@ export async function fetchCategoryVideos(
 
 export async function fetchCategoryHighlights() {
   const categories = await fetchCategories();
-  // Use /api/media?sort=popular for featured
   const res = await fetch(`${API_URL}/media?sort=popular&pageSize=6`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch highlights");
   const data = await res.json();

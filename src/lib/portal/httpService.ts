@@ -99,28 +99,16 @@ async function call<T>(
     }
 
     if (typeof window !== "undefined" && !isSilentCheck) {
-      if (res.status === 404) {
-        triggerGlobalError({
-          title: "Not Found",
-          message: "The requested resource was not found or may have been removed.",
-          action: "dismiss"
-        });
-      } else if (res.status >= 500) {
+      if (res.status >= 500) {
         triggerGlobalError({
           title: "Server Error",
           message: "We're having trouble connecting to our servers. Please try again later.",
           action: "dismiss"
         });
-      } else if (displayMsg) {
+      } else if (displayMsg && res.status !== 404) {
         triggerGlobalError({
           title: "Error",
           message: displayMsg,
-          action: "dismiss"
-        });
-      } else {
-        triggerGlobalError({
-          title: "Unexpected Error",
-          message: "An unexpected error occurred while communicating with the server.",
           action: "dismiss"
         });
       }
@@ -357,6 +345,7 @@ export const httpPortalService = {
     ).toString();
     return call(`/media${qs ? `?${qs}` : ""}`);
   },
+  searchMedia: (q: string) => call<MediaItem[]>(`/media/search?q=${encodeURIComponent(q)}`),
   getMediaById: (id: string) => call(`/media/${id}`),
   createMedia: (input: MediaInput) =>
     call("/admin/media", {
@@ -460,5 +449,11 @@ export const httpPortalService = {
   deleteCategory: (id: string) =>
     call<any>(`/admin/categories/${id}`, {
       method: "DELETE",
+    }),
+  getAdminUsers: () => call<any[]>("/admin/users"),
+  updateUserRole: (userId: string, role: string) =>
+    call<any>(`/admin/users/${userId}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
     }),
 };

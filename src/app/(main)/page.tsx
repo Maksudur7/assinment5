@@ -1,7 +1,7 @@
 import { AlertCircle } from "lucide-react";
 import { HomeClient } from "./HomeClient";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api";
 
 async function fetchFromAPI(path: string) {
   const res = await fetch(`${API_URL}${path}`, {

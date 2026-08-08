@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../index.css";
+import "plyr/dist/plyr.css";
 import { Providers } from "./providers";
-import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +15,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NGV Streaming",
-  description: "Clean & secure streaming platform",
+  title: { template: "%s | NGV Streaming", default: "NGV Streaming — Free Movies & Series" },
+  description: "NGV is Bangladesh's premier free streaming platform. Watch movies, web series, and TV shows in HD — clean, secure, ad-supported.",
+  keywords: ["NGV", "streaming", "movies", "Bangladesh", "free", "series", "watch online"],
+  openGraph: {
+    title: "NGV Streaming — Free Movies & Series",
+    description: "Watch HD movies and web series for free on NGV, Bangladesh's top streaming platform.",
+    type: "website",
+    locale: "bn_BD",
+  },
 };
 
 export default function RootLayout({

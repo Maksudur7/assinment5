@@ -1,23 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Film, User, ShieldCheck } from "lucide-react";
 import { authFetchers } from "@/src/lib/fetchers/core";
 import { triggerGlobalError } from "@/src/lib/events";
 import { NGVActionOverlay } from "@/src/components/ui/NGVLoader";
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
   const [showPassword, setShowPassword] = useState(false);
-
   const [email, setEmail] = useState(""); 
-
   const [password, setPassword] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [demoMenuOpen, setDemoMenuOpen] = useState(false);
-
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +37,7 @@ export default function LoginPage() {
     try {
       await authFetchers.login(email, password);
       setSuccess("Login successful. Redirecting...");
-      window.location.href = "/";
+      window.location.href = callbackUrl;
     } catch (err: any) {
       const errorMsg = err.body?.message || err.message || "An error occurred during login.";
       triggerGlobalError({ 
@@ -237,3 +237,11 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center" />}>
+      <LoginContent />
+    </Suspense>
+  );
+}

@@ -1,4 +1,5 @@
 import { WatchClient } from "./WatchClient";
+import { ProtectedRoute } from "@/src/components/ProtectedRoute";
 
 type WatchRoutePageProps = {
   params: Promise<{ id: string }>;
@@ -7,5 +8,10 @@ type WatchRoutePageProps = {
 export default async function Page({ params }: WatchRoutePageProps) {
   const { id } = await params;
 
-  return <WatchClient id={id} />;
+  return (
+    <ProtectedRoute>
+      <WatchClient id={id} />
+    </ProtectedRoute>
+  );
 }
+
