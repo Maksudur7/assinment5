@@ -1,4 +1,13 @@
+import type { Metadata } from "next";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/src/components/ui/accordion";
+
+export const metadata: Metadata = {
+  title: "Frequently Asked Questions",
+  description:
+    "Find answers to common questions about NGV Streaming — how to watch, reviews, account management, subscriptions, and more.",
+  alternates: { canonical: "https://ngv-streaming.vercel.app/faq" },
+};
+
 
 const faqs = [
   {
