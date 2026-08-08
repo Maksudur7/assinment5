@@ -22,22 +22,21 @@ import { triggerGlobalError } from "../events";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handleAuthError(err: any, onLogout?: () => void, isSilentCheck = false) {
   if (err?.message?.includes("401")) {
-    setAuthToken("");
-    setStoredUser(null);
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("ngv-portal-store-v2");
-    }
-    
-    // Show a popup if it's not a silent background check (like getSessionUser on load)
-    if (typeof window !== "undefined" && !isSilentCheck) {
+    if (!isSilentCheck) {
+      setAuthToken("");
+      setStoredUser(null);
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("ngv-portal-store-v2");
+      }
+      
       triggerGlobalError({
         title: "Authentication Required",
         message: "You need to be logged in to access this feature. Please sign in to continue.",
         action: "login"
       });
+      
+      if (onLogout) onLogout();
     }
-    
-    if (onLogout) onLogout();
   }
 }
 
@@ -189,17 +188,9 @@ export const httpPortalService = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       handleAuthError(err, onLogout, true);
-      if (err?.message?.includes("401") || err?.message?.includes("403")) {
-        setAuthToken("");
-        setStoredUser(null);
-        if (typeof window !== "undefined") {
-          window.localStorage.removeItem("ngv-portal-store-v2");
-        }
-        return null;
-      }
       try {
         const localUser = getStoredUser();
-        if (localUser) {
+        if (localUser && localUser.id) {
           return {
             ...localUser,
             user: localUser,
