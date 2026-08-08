@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import { AlertCircle } from "lucide-react";
 import { HomeClient } from "./HomeClient";
+import { JsonLd } from "@/src/components/JsonLd";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://ngv-streaming.vercel.app";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api";
+
+export const metadata: Metadata = {
+  alternates: { canonical: SITE_URL },
+};
+
 
 async function fetchFromAPI(path: string) {
   const res = await fetch(`${API_URL}${path}`, {
@@ -42,16 +50,31 @@ export default async function Page() {
     const faqs = landingContent?.faqs || [];
 
     return (
-      <HomeClient
-        featured={featured}
-        trending={trending}
-        newReleases={newReleases}
-        highlights={highlights}
-        testimonials={testimonials}
-        faqs={faqs}
-        categories={categoriesWithVideos}
-      />
+      <>
+        <JsonLd
+          schema={{
+            type: "WebSite",
+            name: "NGV Streaming",
+            url: SITE_URL,
+            description: "Bangladesh's premier free streaming platform — movies, series, and TV shows in HD.",
+            potentialAction: {
+              target: `${SITE_URL}/search?q={search_term_string}`,
+              queryInput: "required name=search_term_string",
+            },
+          }}
+        />
+        <HomeClient
+          featured={featured}
+          trending={trending}
+          newReleases={newReleases}
+          highlights={highlights}
+          testimonials={testimonials}
+          faqs={faqs}
+          categories={categoriesWithVideos}
+        />
+      </>
     );
+
   } catch (error) {
     return (
       <div className="min-h-screen bg-background pt-20 flex items-center justify-center px-6">

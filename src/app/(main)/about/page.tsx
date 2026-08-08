@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import { ShieldCheck, Tv, Users } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+
+export const metadata: Metadata = {
+  title: "About NGV — Bangladesh's Free Streaming Platform",
+  description:
+    "Learn about NGV, Bangladesh's premier free ad-supported streaming platform for movies, web series, and TV shows. Built for high performance and clean user experience.",
+  alternates: { canonical: "https://ngv-streaming.vercel.app/about" },
+};
+
 
 export default function AboutPage() {
   return (

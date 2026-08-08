@@ -7,11 +7,12 @@ import { NGVLogo } from "./ui/NGVLoader";
 export function Footer() {
   return (
     <footer className="bg-background border-t border-border mt-20 transition-colors duration-300">
-      {/* Footer Ad Slot */}
-      <div className="max-w-360 mx-auto px-6 py-6">
-        <div className="bg-card border border-border rounded-lg p-8 text-center transition-colors duration-300">
-          <p className="text-muted-foreground text-sm">Advertisement</p>
-          <div className="mt-2 text-muted-foreground/60">728 × 90 Footer Ad Slot</div>
+      {/* Footer Ad Slot - AdSense Optimized (Prevents Layout Shift) */}
+      <div className="max-w-[728px] mx-auto px-6 py-6 min-h-[138px]">
+        <div className="bg-card border border-border rounded-lg p-6 text-center transition-colors duration-300 w-full h-[90px] flex flex-col items-center justify-center overflow-hidden">
+          <span className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Advertisement</span>
+          {/* AdSense ins tag will go here */}
+          <div className="text-muted-foreground/40 text-sm">728 × 90 Ad Space</div>
         </div>
       </div>
 
@@ -57,11 +58,13 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-foreground mb-4">Help</h3>
+            <h3 className="text-foreground mb-4">Legal</h3>
             <ul className="space-y-2 text-muted-foreground">
               <li><Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link></li>
               <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
               <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+              <li><Link href="/dmca" className="hover:text-foreground transition-colors">DMCA Policy</Link></li>
             </ul>
           </div>
         </div>
