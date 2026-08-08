@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { BarChart3, Clapperboard, DollarSign, EyeOff, Shield, Trash2, Upload, UserCheck, XCircle, Layers, Plus, CheckCircle2 } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
@@ -32,7 +33,9 @@ const EMPTY_FORM = {
 
 const MEDIA_PAGE_SIZE = 8;
 
-export default function AdminPage() {
+function AdminPageInner() {
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "media";
   const [user, setUser] = useState<PortalUser | null>(null);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [media, setMedia] = useState<MediaItem[]>([]);
@@ -462,7 +465,7 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        <Tabs defaultValue="media" className="space-y-6">
+        <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="bg-zinc-900 border border-white/10 flex-wrap h-auto">
             <TabsTrigger value="media" className="data-[state=active]:bg-[#E50914] py-2"><Upload className="w-4 h-4 mr-2" />Media Library</TabsTrigger>
             <TabsTrigger value="categories" className="data-[state=active]:bg-[#E50914] py-2"><Layers className="w-4 h-4 mr-2" />Categories</TabsTrigger>
@@ -1000,5 +1003,13 @@ export default function AdminPage() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black pt-24 text-center text-white/70">Loading admin console...</div>}>
+      <AdminPageInner />
+    </Suspense>
   );
 }

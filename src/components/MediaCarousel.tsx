@@ -9,12 +9,14 @@ interface MediaCarouselProps {
   children: React.ReactNode[];
   className?: string;
   slideSize?: string; // e.g. "w-[180px]" or "w-[220px]"
+  compactCards?: React.ReactNode[]; // compact version for mobile grid
 }
 
 export function MediaCarousel({
   children,
   className,
-  slideSize = "w-[160px] sm:w-[180px] md:w-[200px] lg:w-[220px]",
+  slideSize = "w-[180px] md:w-[200px] lg:w-[220px]",
+  compactCards,
 }: MediaCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
@@ -47,50 +49,62 @@ export function MediaCarousel({
 
   if (!children || children.length === 0) return null;
 
+  const mobileItems = compactCards || children;
+
   return (
     <div className={cn("relative group/carousel", className)}>
-      {/* Left Arrow */}
-      <button
-        onClick={scrollPrev}
-        aria-label="Scroll left"
-        className={cn(
-          "absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-12 bg-gradient-to-r from-background to-transparent transition-opacity duration-200 -translate-x-0",
-          canScrollPrev
-            ? "opacity-0 group-hover/carousel:opacity-100"
-            : "opacity-0 pointer-events-none"
-        )}
-      >
-        <div className="w-9 h-9 rounded-full bg-background/90 dark:bg-zinc-900/90 border border-border flex items-center justify-center shadow-lg hover:bg-background dark:hover:bg-zinc-800 transition-colors">
-          <ChevronLeft className="w-5 h-5 text-foreground" />
-        </div>
-      </button>
-
-      {/* Scroll Container */}
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex gap-3 md:gap-4">
-          {children.map((child, i) => (
-            <div key={i} className={cn("shrink-0", slideSize)}>
-              {child}
-            </div>
-          ))}
-        </div>
+      {/* ── Mobile: 4-column compact grid ── */}
+      <div className="grid grid-cols-4 gap-2 sm:hidden">
+        {mobileItems.slice(0, 12).map((child, i) => (
+          <div key={i}>{child}</div>
+        ))}
       </div>
 
-      {/* Right Arrow */}
-      <button
-        onClick={scrollNext}
-        aria-label="Scroll right"
-        className={cn(
-          "absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center w-12 bg-gradient-to-l from-background to-transparent transition-opacity duration-200",
-          canScrollNext
-            ? "opacity-0 group-hover/carousel:opacity-100"
-            : "opacity-0 pointer-events-none"
-        )}
-      >
-        <div className="w-9 h-9 rounded-full bg-background/90 dark:bg-zinc-900/90 border border-border flex items-center justify-center shadow-lg hover:bg-background dark:hover:bg-zinc-800 transition-colors">
-          <ChevronRight className="w-5 h-5 text-foreground" />
+      {/* ── sm+: horizontal scrolling carousel ── */}
+      <div className="hidden sm:block">
+        {/* Left Arrow */}
+        <button
+          onClick={scrollPrev}
+          aria-label="Scroll left"
+          className={cn(
+            "absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-12 bg-gradient-to-r from-background to-transparent transition-opacity duration-200 -translate-x-0",
+            canScrollPrev
+              ? "opacity-0 group-hover/carousel:opacity-100"
+              : "opacity-0 pointer-events-none"
+          )}
+        >
+          <div className="w-9 h-9 rounded-full bg-background/90 dark:bg-zinc-900/90 border border-border flex items-center justify-center shadow-lg hover:bg-background dark:hover:bg-zinc-800 transition-colors">
+            <ChevronLeft className="w-5 h-5 text-foreground" />
+          </div>
+        </button>
+
+        {/* Scroll Container */}
+        <div className="overflow-hidden py-4 -my-4 px-1 -mx-1" ref={emblaRef}>
+          <div className="flex gap-3 md:gap-4">
+            {children.map((child, i) => (
+              <div key={i} className={cn("shrink-0", slideSize)}>
+                {child}
+              </div>
+            ))}
+          </div>
         </div>
-      </button>
+
+        {/* Right Arrow */}
+        <button
+          onClick={scrollNext}
+          aria-label="Scroll right"
+          className={cn(
+            "absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center w-12 bg-gradient-to-l from-background to-transparent transition-opacity duration-200",
+            canScrollNext
+              ? "opacity-0 group-hover/carousel:opacity-100"
+              : "opacity-0 pointer-events-none"
+          )}
+        >
+          <div className="w-9 h-9 rounded-full bg-background/90 dark:bg-zinc-900/90 border border-border flex items-center justify-center shadow-lg hover:bg-background dark:hover:bg-zinc-800 transition-colors">
+            <ChevronRight className="w-5 h-5 text-foreground" />
+          </div>
+        </button>
+      </div>
     </div>
   );
 }
