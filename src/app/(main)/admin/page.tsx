@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Clapperboard, DollarSign, EyeOff, Shield, Trash2, Upload, UserCheck, XCircle, Layers, Plus } from "lucide-react";
+import { BarChart3, Clapperboard, DollarSign, EyeOff, Shield, Trash2, Upload, UserCheck, XCircle, Layers, Plus, CheckCircle2 } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -63,6 +63,19 @@ export default function AdminPage() {
   const [categoryIconInput, setCategoryIconInput] = useState("Film");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
+  // Users management state
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+
+  const filteredUsers = allUsers.filter((u) => {
+    if (!userSearch.trim()) return true;
+    const query = userSearch.toLowerCase();
+    return (
+      (u.name && u.name.toLowerCase().includes(query)) ||
+      (u.email && u.email.toLowerCase().includes(query))
+    );
+  });
+
   async function loadMedia(page = 1, search = "") {
     const result = await portalService.getMedia({ page, pageSize: MEDIA_PAGE_SIZE, search }) as any;
     setMedia(result.items || []);
@@ -87,18 +100,20 @@ export default function AdminPage() {
       const userRole = String(currentUser?.role || stored?.role || "").toLowerCase();
 
       if (userRole === "admin") {
-        const [adminOverview, reviews, comments, landingRes, cats] = await Promise.all([
+        const [adminOverview, reviews, comments, landingRes, cats, usersList] = await Promise.all([
           portalService.getAdminOverview().catch(() => null) as Promise<AdminOverview>,
           portalService.getPendingReviews().catch(() => []) as Promise<Review[]>,
           portalService.getPendingComments().catch(() => []) as Promise<ReviewComment[]>,
           portalService.getLandingContent().catch(() => ({ success: false, data: { highlights: [], testimonials: [], faqs: [] } })) as Promise<any>,
           (portalService as any).getCategories().catch(() => []),
+          (portalService as any).getAdminUsers().catch(() => []),
         ]);
 
         setOverview(adminOverview);
         setPendingReviews(reviews || []);
         setPendingComments(comments || []);
         setCategories(cats || []);
+        setAllUsers(usersList || []);
 
         if (landingRes?.data) {
           setHighlights(landingRes.data.highlights || []);
@@ -360,6 +375,22 @@ export default function AdminPage() {
     }
   }
 
+  async function handleToggleUserRole(userId: string, currentRole: string) {
+    const newRole = currentRole === "admin" ? "user" : "admin";
+    setActionLoading(`Updating user role to ${newRole}...`);
+    try {
+      await (portalService as any).updateUserRole(userId, newRole);
+      const updatedUsers = await (portalService as any).getAdminUsers();
+      setAllUsers(updatedUsers || []);
+      const updatedOverview = await portalService.getAdminOverview().catch(() => null);
+      setOverview(updatedOverview);
+    } catch (err) {
+      console.error("Failed to update user role:", err);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   if (!user) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Loading admin console...</div>;
   }
@@ -386,10 +417,20 @@ export default function AdminPage() {
       <div className="max-w-360 mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-white text-3xl mb-2">Admin Console</h1>
-          <p className="text-white/60">Role-based media library management, moderation, reporting and revenue controls.</p>
+          <p className="text-white/60">Role-based media library management, moderation, reporting and user access controls.</p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-zinc-900 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-[#E50914]" />
+                Total Users
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-3xl font-bold text-foreground">{overview?.totalUsers ?? allUsers.length}</p></CardContent>
+          </Card>
+
           <Card className="bg-zinc-900 border-white/10">
             <CardHeader className="pb-3">
               <CardTitle className="text-white text-base flex items-center gap-2">
@@ -397,7 +438,7 @@ export default function AdminPage() {
                 Total Media
               </CardTitle>
             </CardHeader>
-            <CardContent><p className="text-3xl text-foreground">{overview?.totalMedia ?? 0}</p></CardContent>
+            <CardContent><p className="text-3xl font-bold text-foreground">{overview?.totalMedia ?? 0}</p></CardContent>
           </Card>
 
           <Card className="bg-zinc-900 border-white/10">
@@ -407,7 +448,7 @@ export default function AdminPage() {
                 Pending Reviews
               </CardTitle>
             </CardHeader>
-            <CardContent><p className="text-3xl text-foreground">{overview?.pendingReviews ?? 0}</p></CardContent>
+            <CardContent><p className="text-3xl font-bold text-foreground">{overview?.pendingReviews ?? 0}</p></CardContent>
           </Card>
 
           <Card className="bg-zinc-900 border-white/10">
@@ -417,7 +458,7 @@ export default function AdminPage() {
                 Hidden Comments
               </CardTitle>
             </CardHeader>
-            <CardContent><p className="text-3xl text-foreground">{overview?.hiddenComments ?? 0}</p></CardContent>
+            <CardContent><p className="text-3xl font-bold text-foreground">{overview?.hiddenComments ?? 0}</p></CardContent>
           </Card>
         </div>
 
@@ -425,6 +466,7 @@ export default function AdminPage() {
           <TabsList className="bg-zinc-900 border border-white/10 flex-wrap h-auto">
             <TabsTrigger value="media" className="data-[state=active]:bg-[#E50914] py-2"><Upload className="w-4 h-4 mr-2" />Media Library</TabsTrigger>
             <TabsTrigger value="categories" className="data-[state=active]:bg-[#E50914] py-2"><Layers className="w-4 h-4 mr-2" />Categories</TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-[#E50914] py-2"><UserCheck className="w-4 h-4 mr-2" />Users & Access</TabsTrigger>
             <TabsTrigger value="moderation" className="data-[state=active]:bg-[#E50914] py-2"><Shield className="w-4 h-4 mr-2" />Moderation</TabsTrigger>
             <TabsTrigger value="reports" className="data-[state=active]:bg-[#E50914] py-2"><BarChart3 className="w-4 h-4 mr-2" />Reports</TabsTrigger>
             <TabsTrigger value="landing" className="data-[state=active]:bg-[#E50914] py-2"><Upload className="w-4 h-4 mr-2" />Landing Page</TabsTrigger>
@@ -564,36 +606,96 @@ export default function AdminPage() {
 
           <TabsContent value="moderation" className="grid lg:grid-cols-2 gap-6">
             <Card className="bg-zinc-900 border-white/10">
-              <CardHeader><CardTitle className="text-white">Review Moderation</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {pendingReviews.length === 0 ? <p className="text-white/60">No pending reviews.</p> : pendingReviews.map((r) => (
-                  <div key={r.id} className="border border-white/10 rounded-md p-3 bg-black/30">
-                    <p className="text-white">{r.userName} • {r.rating}/10</p>
-                    <p className="text-white/70 text-sm">{r.content}</p>
-                    <div className="flex gap-2 mt-2">
-                      <Button size="sm" className="bg-green-700 hover:bg-green-600" disabled={!!actionLoading} onClick={() => void approveReview(r.id)}><UserCheck className="w-3 h-3 mr-1" />Approve</Button>
-                      <Button size="sm" variant="outline" className="bg-yellow-900/20 border-yellow-700 text-yellow-300" disabled={!!actionLoading} onClick={() => void unpublishReview(r.id)}><XCircle className="w-3 h-3 mr-1" />Unpublish</Button>
-                      <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" disabled={!!actionLoading} onClick={() => void removeReview(r.id)}><Trash2 className="w-3 h-3 mr-1" />Remove</Button>
-                    </div>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-red-500" />
+                    Review Moderation Queue
+                  </CardTitle>
+                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+                    {pendingReviews.length} Pending
+                  </Badge>
+                </div>
+                <CardDescription>Approve, unpublish or permanently remove pending movie & series reviews</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {pendingReviews.length === 0 ? (
+                  <div className="text-center py-10 border border-white/5 rounded-lg bg-black/20">
+                    <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-2 opacity-80" />
+                    <p className="text-white font-medium">All Clean!</p>
+                    <p className="text-white/50 text-sm">No pending user reviews requiring moderation.</p>
                   </div>
-                ))}
+                ) : (
+                  pendingReviews.map((r) => (
+                    <div key={r.id} className="border border-white/10 rounded-lg p-4 bg-black/40 space-y-3 hover:border-white/20 transition-all">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-semibold text-sm">{r.userName}</span>
+                          <span className="text-xs text-white/40">•</span>
+                          <span className="text-xs text-red-400 font-bold">★ {r.rating}/10</span>
+                        </div>
+                        <span className="text-xs text-white/40">{r.mediaTitle || "Media Item"}</span>
+                      </div>
+                      <p className="text-white/80 text-sm italic bg-zinc-800/50 p-2.5 rounded border border-white/5">"{r.content}"</p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs" disabled={!!actionLoading} onClick={() => void approveReview(r.id)}>
+                          <UserCheck className="w-3.5 h-3.5 mr-1" /> Approve & Publish
+                        </Button>
+                        <Button size="sm" variant="outline" className="bg-amber-900/20 border-amber-700/60 text-amber-300 hover:bg-amber-900/40 text-xs" disabled={!!actionLoading} onClick={() => void unpublishReview(r.id)}>
+                          <XCircle className="w-3.5 h-3.5 mr-1" /> Unpublish
+                        </Button>
+                        <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700/60 text-red-300 hover:bg-red-900/40 text-xs" disabled={!!actionLoading} onClick={() => void removeReview(r.id)}>
+                          <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
             <Card className="bg-zinc-900 border-white/10">
-              <CardHeader><CardTitle className="text-white">Comment Moderation</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {pendingComments.length === 0 ? <p className="text-white/60">No hidden comments currently.</p> : pendingComments.map((c) => (
-                  <div key={c.id} className="border border-white/10 rounded-md p-3 bg-black/30">
-                    <p className="text-white">{c.userName}</p>
-                    <p className="text-white/70 text-sm">{c.content}</p>
-                    <div className="flex gap-2 mt-2">
-                      <Button size="sm" className="bg-green-700 hover:bg-green-600" disabled={!!actionLoading} onClick={() => void approveComment(c.id)}>Approve</Button>
-                      <Button size="sm" variant="outline" className="bg-yellow-900/20 border-yellow-700 text-yellow-300" disabled={!!actionLoading} onClick={() => void unpublishComment(c.id)}>Hide</Button>
-                      <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700 text-red-300" disabled={!!actionLoading} onClick={() => void removeComment(c.id)}>Remove</Button>
-                    </div>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <EyeOff className="w-5 h-5 text-red-500" />
+                    Comment Moderation Queue
+                  </CardTitle>
+                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                    {pendingComments.length} Flagged
+                  </Badge>
+                </div>
+                <CardDescription>Moderate reported or hidden comments on user reviews</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {pendingComments.length === 0 ? (
+                  <div className="text-center py-10 border border-white/5 rounded-lg bg-black/20">
+                    <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-2 opacity-80" />
+                    <p className="text-white font-medium">Comments Moderated!</p>
+                    <p className="text-white/50 text-sm">No flagged or hidden comments currently.</p>
                   </div>
-                ))}
+                ) : (
+                  pendingComments.map((c) => (
+                    <div key={c.id} className="border border-white/10 rounded-lg p-4 bg-black/40 space-y-3 hover:border-white/20 transition-all">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-semibold text-sm">{c.userName}</span>
+                        <span className="text-xs text-white/40">{c.reviewTitle ? `on "${c.reviewTitle}"` : "Comment"}</span>
+                      </div>
+                      <p className="text-white/80 text-sm bg-zinc-800/50 p-2.5 rounded border border-white/5">"{c.content}"</p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs" disabled={!!actionLoading} onClick={() => void approveComment(c.id)}>
+                          Approve Comment
+                        </Button>
+                        <Button size="sm" variant="outline" className="bg-amber-900/20 border-amber-700/60 text-amber-300 hover:bg-amber-900/40 text-xs" disabled={!!actionLoading} onClick={() => void unpublishComment(c.id)}>
+                          Hide
+                        </Button>
+                        <Button size="sm" variant="outline" className="bg-red-900/20 border-red-700/60 text-red-300 hover:bg-red-900/40 text-xs" disabled={!!actionLoading} onClick={() => void removeComment(c.id)}>
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -601,19 +703,51 @@ export default function AdminPage() {
           <TabsContent value="reports">
             <Card className="bg-zinc-900 border-white/10">
               <CardHeader>
-                <CardTitle className="text-white">Aggregated Ratings & Most Reviewed</CardTitle>
-                <CardDescription>High-level insights for editorial and moderation decisions</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-red-500" />
+                      Content Analytics & Popular Titles
+                    </CardTitle>
+                    <CardDescription>Top rated movies & web series calculated from real user engagement</CardDescription>
+                  </div>
+                  <Badge className="bg-red-600 text-white">Live Platform Rankings</Badge>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {(overview?.mostReviewed ?? []).map((row) => (
-                  <div key={row.mediaId} className="flex items-center justify-between border border-white/10 rounded-md p-3 bg-black/30">
-                    <div>
-                      <p className="text-white">{row.title}</p>
-                      <p className="text-white/60 text-sm">Reviews: {row.totalReviews}</p>
-                    </div>
-                    <Badge className="bg-[#E50914]">Avg {row.avgRating.toFixed(1)}</Badge>
+                {(!overview?.mostReviewed || overview.mostReviewed.length === 0) ? (
+                  <div className="text-center py-10 border border-white/5 rounded-lg bg-black/20">
+                    <p className="text-white/60">No analytics data recorded yet.</p>
                   </div>
-                ))}
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/10">
+                        <TableHead className="text-white">Rank & Title</TableHead>
+                        <TableHead className="text-white text-center">Total Reviews</TableHead>
+                        <TableHead className="text-white text-right">Average Rating</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {overview.mostReviewed.map((row, index) => (
+                        <TableRow key={row.mediaId} className="border-white/10 hover:bg-white/5 transition-colors">
+                          <TableCell className="text-white font-semibold flex items-center gap-3">
+                            <div className="w-7 h-7 rounded bg-red-500/20 border border-red-500/30 text-red-400 flex items-center justify-center font-bold text-xs">
+                              #{index + 1}
+                            </div>
+                            <span>{row.title}</span>
+                          </TableCell>
+                          <TableCell className="text-center text-white/70">{row.totalReviews} user reviews</TableCell>
+                          <TableCell className="text-right">
+                            <Badge className="bg-red-600 text-white font-bold px-3 py-1">
+                              ★ {row.avgRating.toFixed(1)} / 10
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -777,6 +911,91 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <Card className="bg-zinc-900 border-white/10">
+              <CardHeader>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <UserCheck className="w-5 h-5 text-red-500" />
+                      Registered Users & Access Control
+                    </CardTitle>
+                    <CardDescription>Manage user permissions, view registration details and assign admin access</CardDescription>
+                  </div>
+                  <Input
+                    placeholder="Search by name or email..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="max-w-xs bg-zinc-800 border-white/10 text-white placeholder:text-zinc-500"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/10">
+                      <TableHead className="text-white">User</TableHead>
+                      <TableHead className="text-white">Email Address</TableHead>
+                      <TableHead className="text-white">Role</TableHead>
+                      <TableHead className="text-white">Joined Date</TableHead>
+                      <TableHead className="text-white text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.length === 0 ? (
+                      <TableRow className="border-white/10">
+                        <TableCell colSpan={5} className="text-white/60 text-center py-6">
+                          No users found matching "{userSearch}".
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredUsers.map((u) => {
+                        const isUserAdmin = String(u.role).toLowerCase() === "admin";
+                        return (
+                          <TableRow key={u.id} className="border-white/10 hover:bg-white/5 transition-colors">
+                            <TableCell className="text-white font-semibold flex items-center gap-2.5 py-3">
+                              {u.image ? (
+                                <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-500 border border-red-500/30 flex items-center justify-center text-xs font-bold">
+                                  {u.name?.[0]?.toUpperCase() || "U"}
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-sm font-semibold">{u.name}</p>
+                                <p className="text-[10px] text-zinc-400 md:hidden">{u.email}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-white/70 text-sm">{u.email}</TableCell>
+                            <TableCell>
+                              <Badge className={isUserAdmin ? "bg-red-500/20 text-red-500 border-red-500/30 uppercase text-[10px] font-bold" : "bg-zinc-800 text-zinc-300 uppercase text-[10px]"}>
+                                {isUserAdmin ? "Admin" : "Member"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-white/60 text-xs">
+                              {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "N/A"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={isUserAdmin ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700" : "bg-red-900/20 border-red-700 text-red-300 hover:bg-red-900/40 font-semibold"}
+                                disabled={!!actionLoading || u.id === user.id}
+                                onClick={() => void handleToggleUserRole(u.id, u.role)}
+                              >
+                                {isUserAdmin ? "Demote to Member" : "Promote to Admin"}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

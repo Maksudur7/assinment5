@@ -1,49 +1,121 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Bell, Film, Info, Bookmark, CheckCheck, Trash2, X } from "lucide-react";
+import { Bell, Film, Info, Bookmark, CheckCheck, Trash2, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import {
-  NotificationItem,
-  getStoredNotifications,
-  subscribeNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-  clearAllNotifications,
-} from "@/src/lib/notifications";
 import { cn } from "./ui/utils";
 
-export function NotificationCenter({ className }: { className?: string }) {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+// ─── Types ──────────────────────────────────────────────────
+interface ApiNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  link?: string;
+  createdAt: string;
+}
 
-  useEffect(() => {
-    setNotifications(getStoredNotifications());
-    const unsubscribe = subscribeNotifications((updated) => {
-      setNotifications(updated);
-    });
-    return () => unsubscribe();
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api";
+
+function getToken(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("ngv_auth_token") || "";
+}
+
+function timeAgo(dateStr: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function getCategoryIcon(type: string) {
+  switch (type) {
+    case "review_approved":
+      return <Info className="w-4 h-4 text-blue-500" />;
+    case "watchlist":
+      return <Bookmark className="w-4 h-4 text-amber-500" />;
+    case "new_release":
+      return <Film className="w-4 h-4 text-red-500" />;
+    default:
+      return <Bell className="w-4 h-4 text-zinc-400" />;
+  }
+}
+
+// ─── Component ──────────────────────────────────────────────
+export function NotificationCenter({ className }: { className?: string }) {
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    const token = getToken();
+    if (!token) return; // Not logged in
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/notifications?limit=20`, {
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch {
+      // Silently fail — not logged in or server down
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Fetch on open
+  useEffect(() => {
+    if (isOpen) fetchNotifications();
+  }, [isOpen, fetchNotifications]);
 
-  const getCategoryIcon = (category: NotificationItem["category"]) => {
-    switch (category) {
-      case "release":
-        return <Film className="w-4 h-4 text-red-500" />;
-      case "watchlist":
-        return <Bookmark className="w-4 h-4 text-amber-500" />;
-      case "review":
-        return <Info className="w-4 h-4 text-blue-500" />;
-      default:
-        return <Info className="w-4 h-4 text-zinc-400" />;
-    }
+  // Poll every 60 seconds for new notifications
+  useEffect(() => {
+    const interval = setInterval(fetchNotifications, 60000);
+    fetchNotifications(); // initial load
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const markAsRead = async (id: string) => {
+    const token = getToken();
+    try {
+      await fetch(`${API_URL}/notifications/${id}/read`, {
+        method: "POST",
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+    } catch { }
+  };
+
+  const markAllAsRead = async () => {
+    const token = getToken();
+    try {
+      await fetch(`${API_URL}/notifications/read-all`, {
+        method: "POST",
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch { }
   };
 
   return (
@@ -57,6 +129,7 @@ export function NotificationCenter({ className }: { className?: string }) {
             className
           )}
           aria-label="Notifications"
+          id="notification-bell"
         >
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
@@ -75,9 +148,7 @@ export function NotificationCenter({ className }: { className?: string }) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
           <div className="flex items-center gap-2">
             <Bell className="w-4 h-4 text-red-500" />
-            <h3 className="text-sm font-bold text-white tracking-wide">
-              Notifications
-            </h3>
+            <h3 className="text-sm font-bold text-white tracking-wide">Notifications</h3>
             {unreadCount > 0 && (
               <span className="bg-red-600/20 text-red-400 border border-red-500/30 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                 {unreadCount} new
@@ -86,9 +157,16 @@ export function NotificationCenter({ className }: { className?: string }) {
           </div>
 
           <div className="flex items-center gap-1">
+            <button
+              onClick={fetchNotifications}
+              className="p-1.5 rounded hover:bg-white/10 transition-colors"
+              title="Refresh"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5 text-zinc-400", loading && "animate-spin")} />
+            </button>
             {unreadCount > 0 && (
               <button
-                onClick={() => markAllNotificationsAsRead()}
+                onClick={markAllAsRead}
                 className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-white/10 transition-colors"
                 title="Mark all as read"
               >
@@ -96,21 +174,17 @@ export function NotificationCenter({ className }: { className?: string }) {
                 <span className="hidden sm:inline">Read all</span>
               </button>
             )}
-            {notifications.length > 0 && (
-              <button
-                onClick={() => clearAllNotifications()}
-                className="text-xs text-zinc-400 hover:text-red-400 p-1.5 rounded hover:bg-white/10 transition-colors"
-                title="Clear all"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
         </div>
 
         {/* Notification List */}
         <div className="max-h-80 overflow-y-auto divide-y divide-white/5">
-          {notifications.length === 0 ? (
+          {loading && notifications.length === 0 ? (
+            <div className="p-6 text-center">
+              <RefreshCw className="w-5 h-5 text-zinc-500 animate-spin mx-auto mb-2" />
+              <p className="text-xs text-zinc-500">Loading...</p>
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="p-8 text-center space-y-2">
               <Bell className="w-8 h-8 text-zinc-600 mx-auto opacity-50" />
               <p className="text-sm text-zinc-400 font-medium">No notifications yet</p>
@@ -120,36 +194,32 @@ export function NotificationCenter({ className }: { className?: string }) {
             notifications.map((item) => (
               <div
                 key={item.id}
-                onClick={() => {
-                  markNotificationAsRead(item.id);
-                  if (item.actionUrl) setIsOpen(false);
-                }}
+                onClick={() => markAsRead(item.id)}
                 className={cn(
                   "p-3.5 flex gap-3 items-start transition-colors cursor-pointer group hover:bg-white/5",
-                  !item.read ? "bg-red-500/5 border-l-2 border-red-500" : "opacity-80 hover:opacity-100"
+                  !item.isRead ? "bg-red-500/5 border-l-2 border-red-500" : "opacity-80 hover:opacity-100"
                 )}
               >
                 <div className="p-2 rounded-xl bg-white/5 border border-white/10 shrink-0 group-hover:scale-105 transition-transform">
-                  {getCategoryIcon(item.category)}
+                  {getCategoryIcon(item.type)}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className={cn("text-xs font-semibold truncate", !item.read ? "text-white" : "text-zinc-300")}>
+                    <h4 className={cn("text-xs font-semibold truncate", !item.isRead ? "text-white" : "text-zinc-300")}>
                       {item.title}
                     </h4>
-                    <span className="text-[10px] text-zinc-500 shrink-0">
-                      {item.timestamp}
-                    </span>
+                    <span className="text-[10px] text-zinc-500 shrink-0">{timeAgo(item.createdAt)}</span>
                   </div>
 
                   <p className="text-xs text-zinc-400 line-clamp-2 mt-0.5 leading-relaxed">
                     {item.message}
                   </p>
 
-                  {item.actionUrl && (
+                  {item.link && (
                     <Link
-                      href={item.actionUrl}
+                      href={item.link}
+                      onClick={() => setIsOpen(false)}
                       className="inline-flex items-center gap-1 text-[11px] text-red-400 font-medium mt-1.5 hover:underline"
                     >
                       View details →
@@ -157,7 +227,7 @@ export function NotificationCenter({ className }: { className?: string }) {
                   )}
                 </div>
 
-                {!item.read && (
+                {!item.isRead && (
                   <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1" />
                 )}
               </div>

@@ -104,7 +104,6 @@ export const authFetchers = {
     const res: any = await authClient.signIn.social({
       provider,
       callbackURL,
-      disableRedirect: true,
     });
 
     if (res?.error) {

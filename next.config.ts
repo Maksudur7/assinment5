@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const BACKEND_URL = process.env.BACKEND_API_URL
   ? process.env.BACKEND_API_URL.replace(/\/api$/, "")
-  : "http://localhost:4000";
+  : "https://ngv-backend.vercel.app";
 
 const nextConfig: NextConfig = {
   typescript: {

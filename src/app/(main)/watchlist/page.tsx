@@ -7,28 +7,34 @@ import { VideoCard } from "@/src/components/VideoCard";
 import { portalService } from "@/src/lib/portal";
 import type { MediaItem } from "@/src/lib/portal/types";
 
-export default function WatchlistPage() {
+import { ProtectedRoute } from "@/src/components/ProtectedRoute";
+
+function WatchlistContent() {
   const router = useRouter();
   const [items, setItems] = useState<MediaItem[]>([]);
 
   useEffect(() => {
     async function fetchData() {
-      const items = await portalService.getWatchlist();
-      setItems(items as MediaItem[]);
+      try {
+        const items = await portalService.getWatchlist();
+        setItems(items as MediaItem[]);
+      } catch {
+        // Handled by API auth handler
+      }
     }
     fetchData();
   }, []);
 
   return (
-    <div className="min-h-screen bg-black pt-20">
+    <div className="min-h-screen bg-background pt-20">
       <div className="max-w-[1440px] mx-auto px-6 py-8">
-        <div className="rounded-lg bg-zinc-900 border border-white/10 p-6 mb-6">
-          <h1 className="text-white text-3xl mb-2">My Watchlist</h1>
-          <p className="text-white/60">Saved titles you can watch later.</p>
+        <div className="rounded-xl bg-card border border-border p-6 mb-6">
+          <h1 className="text-foreground text-3xl font-bold mb-2">My Watchlist</h1>
+          <p className="text-muted-foreground text-sm">Saved titles you can watch later.</p>
         </div>
 
         {items.length === 0 ? (
-          <div className="rounded-lg bg-zinc-900 border border-dashed border-white/15 p-12 text-center text-white/60">
+          <div className="rounded-xl bg-card border border-dashed border-border p-12 text-center text-muted-foreground">
             No watchlist items yet.
           </div>
         ) : (
@@ -52,3 +58,12 @@ export default function WatchlistPage() {
     </div>
   );
 }
+
+export default function WatchlistPage() {
+  return (
+    <ProtectedRoute>
+      <WatchlistContent />
+    </ProtectedRoute>
+  );
+}
+

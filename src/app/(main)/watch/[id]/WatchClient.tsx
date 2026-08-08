@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { MessageCircle, ShieldAlert, ThumbsUp, Eye, Users, PlayCircle, Loader2 } from "lucide-react";
 import Hls from "hls.js";
+import dynamic from "next/dynamic";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const PlyrPlayer = dynamic(() => import("plyr-react").then((m: any) => m.default), { ssr: false });
 
 import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { VideoCard } from "@/src/components/VideoCard";
@@ -21,7 +24,7 @@ import type { MediaItem, PortalUser, Review, ReviewComment } from "@/src/lib/por
 
 
 // Real-time view/user count API helpers
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api";
 
 async function incrementView(id: string) {
   try {
@@ -98,7 +101,7 @@ export function WatchClient({ id }: { id: string }) {
       setAllMedia(list.items as MediaItem[]);
 
       if (item && me) {
-        portalService.addToHistory(item.id).catch(() => {});
+        portalService.addToHistory(item.id).catch(() => { });
         // getReviews now expects 2 arguments: mediaId and includePending
         const rRaw = await portalService.getReviews(item.id, true);
         const r = Array.isArray(rRaw) ? (rRaw as Review[]) : [];
@@ -127,7 +130,7 @@ export function WatchClient({ id }: { id: string }) {
 
   useEffect(() => {
     let mounted = true;
-    
+
     if (!hasIncremented.current) {
       hasIncremented.current = true;
       incrementView(id).then((stats) => {
@@ -359,14 +362,41 @@ export function WatchClient({ id }: { id: string }) {
                 />
               </div>
             ) : (
-              <div className="w-full aspect-video bg-black flex items-center justify-center">
-                <video
-                  ref={videoRef}
-                  controls
-                  poster={media.poster}
-                  className="w-full h-full object-contain outline-none"
-                  crossOrigin="anonymous"
-                  playsInline
+              <div className="w-full aspect-video bg-black [&_.plyr]:h-full [&_.plyr]:w-full [&_.plyr--video]:aspect-video">
+                <PlyrPlayer
+                  source={{
+                    type: "video" as const,
+                    sources: [
+                      {
+                        src: media.streamingUrl,
+                        type: media.streamingUrl.endsWith(".m3u8")
+                          ? "application/x-mpegURL"
+                          : "video/mp4",
+                      },
+                    ],
+                    poster: media.poster,
+                    title: media.title,
+                  }}
+                  options={{
+                    controls: [
+                      "play-large",
+                      "rewind",
+                      "play",
+                      "fast-forward",
+                      "progress",
+                      "current-time",
+                      "duration",
+                      "mute",
+                      "volume",
+                      "settings",
+                      "pip",
+                      "fullscreen",
+                    ],
+                    settings: ["quality", "speed", "loop"],
+                    speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+                    keyboard: { global: false, focused: true },
+                    tooltips: { controls: true, seek: true },
+                  }}
                 />
               </div>
             )}
@@ -498,7 +528,7 @@ export function WatchClient({ id }: { id: string }) {
                 <TabsTrigger value="related" className="flex-1 rounded-md text-sm py-1.5 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-white/60">Up Next</TabsTrigger>
                 <TabsTrigger value="popular" className="flex-1 rounded-md text-sm py-1.5 data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-white/60">Popular</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="related" className="mt-0 outline-none">
                 <div className="grid gap-3">
                   {related.length === 0 ? (
