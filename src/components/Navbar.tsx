@@ -104,17 +104,36 @@ export function Navbar() {
   useEffect(() => {
     let mountedLocal = true;
 
-    // Fast initial check from storage
+    // 1. Fast initial check from storage
     const stored = getStoredUser();
-    if (stored) {
+    if (stored && mountedLocal) {
       setUser(stored);
-      setLoadingUser(false);
-    } else {
       setLoadingUser(false);
     }
 
-    const token = getAuthToken();
-    if (token || session?.session?.token) {
+    // 2. Sync Better Auth session if available (e.g. Social OAuth login or cookie session)
+    if (session?.user) {
+      const activeUser = {
+        id: session.user.id,
+        name: session.user.name || "User",
+        email: session.user.email || "",
+        role: (session.user as any).role || stored?.role || "user",
+        image: session.user.image || stored?.image,
+      };
+      if (mountedLocal) {
+        setUser(activeUser);
+        setStoredUser(activeUser);
+      }
+      if (session.session?.token) {
+        setAuthToken(session.session.token);
+      }
+      setLoadingUser(false);
+      return;
+    }
+
+    // 3. Verify/refresh user state from backend if token is present
+    const token = getAuthToken() || session?.session?.token;
+    if (token) {
       httpPortalService.getCurrentUser()
         .then((u) => {
           if (mountedLocal && u && u.id) {
@@ -129,7 +148,7 @@ export function Navbar() {
           }
         })
         .catch(() => {
-          if (mountedLocal) {
+          if (mountedLocal && !stored) {
             setUser(null);
           }
         })
@@ -138,7 +157,9 @@ export function Navbar() {
         });
     } else {
       if (mountedLocal) {
-        setUser(null);
+        if (!stored && !session?.user) {
+          setUser(null);
+        }
         setLoadingUser(false);
       }
     }
