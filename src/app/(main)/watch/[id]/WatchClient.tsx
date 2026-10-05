@@ -7,7 +7,7 @@ import Hls from "hls.js";
 import dynamic from "next/dynamic";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PlyrPlayer = dynamic(() => import("plyr-react").then((m: any) => m.default), { ssr: false });
+const PlyrPlayer = dynamic<any>(() => import("plyr-react").then((m: any) => m.default || m), { ssr: false });
 
 import { ImageWithFallback } from "@/src/components/figma/ImageWithFallback";
 import { VideoCard } from "@/src/components/VideoCard";
@@ -28,32 +28,31 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.a
 
 async function incrementView(id: string) {
   try {
-    const res = await fetch(`${API_URL}/media/${id}/increment-view`, { method: "POST" });
+    const res = await fetch(`${API_URL}/media/${id}/increment-view`, { method: "POST", credentials: "include" });
     if (!res.ok) throw new Error("Failed to increment view");
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-async function decrementViewer(id: string) {
-  try {
-    const res = await fetch(`${API_URL}/media/${id}/decrement-viewer`, { method: "POST" });
-    if (!res.ok) throw new Error("Failed to decrement viewer");
-    return await res.json();
+    const json = await res.json();
+    return json.data || json;
   } catch {
     return null;
   }
 }
 async function getViewStats(id: string) {
   try {
-    const res = await fetch(`${API_URL}/media/${id}/view-stats`);
+    const res = await fetch(`${API_URL}/media/${id}/view-stats`, { credentials: "include" });
     if (!res.ok) throw new Error("Failed to get view stats");
-    return await res.json();
+    const json = await res.json();
+    return json.data || json;
   } catch {
     return null;
   }
 }
-
+async function sendHeartbeat(id: string) {
+  try {
+    await fetch(`${API_URL}/media/${id}/heartbeat`, { method: "POST", credentials: "include" });
+  } catch {
+    // ignore
+  }
+}
 
 import { Loader } from "lucide-react";
 import { toast } from "sonner";
@@ -81,9 +80,9 @@ export function WatchClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [lastSavedTime, setLastSavedTime] = useState(0);
+  const [selectedServerIndex, setSelectedServerIndex] = useState(0);
 
   const loadAll = useCallback(async (silent = false) => {
-
     if (!silent) setLoading(true);
     try {
       const [meRaw, itemRaw, listRaw] = await Promise.all([
@@ -104,7 +103,6 @@ export function WatchClient({ id }: { id: string }) {
 
       if (item && me) {
         portalService.addToHistory(item.id).catch(() => { });
-        // getReviews now expects 2 arguments: mediaId and includePending
         const rRaw = await portalService.getReviews(item.id, true);
         const r = Array.isArray(rRaw) ? (rRaw as Review[]) : [];
         setReviews(r as Review[]);
@@ -139,36 +137,28 @@ export function WatchClient({ id }: { id: string }) {
       hasIncremented.current = true;
       incrementView(id).then((stats) => {
         if (stats && mounted) {
-          setViewCount(stats.viewCount);
-          setUserCount(stats.currentViewers);
+          setViewCount(stats.viewCount ?? 0);
+          setUserCount(stats.currentViewers ?? 0);
         }
       });
     }
 
-    // Connect Server-Sent Events (SSE) for real-time stats
-    const eventSource = new EventSource(`${API_URL}/media/${id}/viewers/stream`);
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (mounted) {
-          setViewCount(data.viewCount);
-          setUserCount(data.currentViewers);
-        }
-      } catch (e) {
-        console.error("SSE parse error", e);
-      }
-    };
+    sendHeartbeat(id);
 
-    const handleUnload = () => {
-      navigator.sendBeacon(`${API_URL}/media/${id}/decrement-viewer`);
-    };
-    window.addEventListener("beforeunload", handleUnload);
+    const interval = setInterval(() => {
+      if (!mounted) return;
+      sendHeartbeat(id);
+      getViewStats(id).then((stats) => {
+        if (stats && mounted) {
+          setViewCount(stats.viewCount ?? 0);
+          setUserCount(stats.currentViewers ?? 0);
+        }
+      });
+    }, 10000);
 
     return () => {
       mounted = false;
-      eventSource.close();
-      window.removeEventListener("beforeunload", handleUnload);
-      decrementViewer(id);
+      clearInterval(interval);
     };
   }, [id]);
 
@@ -339,17 +329,70 @@ export function WatchClient({ id }: { id: string }) {
   function getYouTubeEmbedUrl(url: string) {
     const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/);
     if (!ytMatch) return null;
-    // Use youtube-nocookie.com for enhanced privacy (no tracking cookies)
     return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?rel=0&modestbranding=1&color=white`;
   }
 
   const youTubeEmbedUrl = getYouTubeEmbedUrl(media.streamingUrl);
+
+  // Multi-server builder for embed sources
+  const getEmbedServers = (url: string) => {
+    const isEmbed = url.includes("vidsrc") || 
+                    url.includes("autoembed") || 
+                    url.includes("2embed") || 
+                    url.includes("embed") || 
+                    url.includes("iframe");
+
+    if (!isEmbed) return null;
+
+    const match = url.match(/\/(movie|tv)\/(\d+)/);
+    if (match) {
+      const type = match[1];
+      const tmdbId = match[2];
+      const isTv = type === "tv";
+      return [
+        { name: "Server 1 (VidSrc)", url: `https://vidsrc.to/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
+        { name: "Server 2 (AutoEmbed)", url: `https://player.autoembed.cc/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
+        { name: "Server 3 (2Embed)", url: isTv ? `https://www.2embed.cc/embedtv/${tmdbId}&s=1&e=1` : `https://www.2embed.cc/embed/${tmdbId}` },
+        { name: "Server 4 (Embed.su)", url: `https://embed.su/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
+      ];
+    }
+
+    return [{ name: "Server 1 (Primary)", url }];
+  };
+
+  const embedServers = media ? getEmbedServers(media.streamingUrl) : null;
+  const activeEmbedUrl = embedServers ? (embedServers[selectedServerIndex]?.url || embedServers[0].url) : null;
 
   return (
     <div className="min-h-screen bg-black pt-20">
       <div className="max-w-360 mx-auto px-0 lg:px-6 py-1 grid lg:grid-cols-[1fr_360px] gap-6">
         <div className="space-y-6">
           <div className="rounded-b-lg overflow-hidden border border-white/10 bg-zinc-900">
+            {/* Server Selector Toolbar for Embed Players */}
+            {embedServers && embedServers.length > 0 && (
+              <div className="flex items-center justify-between gap-2 p-3 bg-zinc-950 border-b border-white/10 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-white/60 font-medium px-1">Switch Server:</span>
+                  {embedServers.map((srv, idx) => (
+                    <button
+                      key={srv.name}
+                      onClick={() => setSelectedServerIndex(idx)}
+                      className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
+                        selectedServerIndex === idx
+                          ? "bg-[#E50914] text-white shadow-md shadow-red-900/50"
+                          : "bg-zinc-800 text-white/70 hover:bg-zinc-700 hover:text-white"
+                      }`}
+                    >
+                      {srv.name}
+                    </button>
+                  ))}
+                </div>
+                <Badge variant="outline" className="border-green-500/30 text-green-400 text-[11px]">
+                  ● HD Stream Ready
+                </Badge>
+              </div>
+            )}
+
             <div className="relative group">
               {/* Real-time stats (Overlay) */}
               <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-6 px-4 py-3 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
@@ -368,6 +411,20 @@ export function WatchClient({ id }: { id: string }) {
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     className="w-full h-full"
+                  />
+                </div>
+              ) : activeEmbedUrl ? (
+                <div className="w-full aspect-video bg-black flex items-center justify-center">
+                  <iframe
+                    key={activeEmbedUrl}
+                    width="100%"
+                    height="100%"
+                    src={activeEmbedUrl}
+                    title={media.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                    allowFullScreen
+                    className="w-full h-full border-0"
                   />
                 </div>
               ) : (

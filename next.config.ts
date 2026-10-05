@@ -5,15 +5,10 @@ const BACKEND_URL = process.env.BACKEND_API_URL
   : "https://ngv-backend.vercel.app";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
+      { protocol: "https", hostname: "**" },
+      { protocol: "http", hostname: "**" },
     ],
   },
   async rewrites() {

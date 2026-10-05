@@ -30,11 +30,14 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env.development.local
-.env.test.local
-.env.production.local
+# env files (never commit secrets)
+.env
+.env.*
 *.env
+!.env.example
+
+# Editor auto-run tasks/settings (prevent folderOpen task injection)
+.vscode/
 
 # vercel
 .vercel

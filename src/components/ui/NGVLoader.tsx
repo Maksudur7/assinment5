@@ -100,11 +100,12 @@ export function NGVFullLoader() {
 /**
  * Action Overlay Loader
  */
-export function NGVActionOverlay() {
+export function NGVActionOverlay({ text }: NGVLoaderProps) {
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-zinc-950/90 border border-white/10 px-6 py-4 rounded-2xl shadow-xl flex items-center justify-center">
+      <div className="bg-zinc-950/90 border border-white/10 px-6 py-4 rounded-2xl shadow-xl flex flex-col items-center justify-center gap-3">
         <NGVTextAnimated size="md" />
+        {text && <p className="text-white/80 text-sm font-medium">{text}</p>}
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+"use client";
+
 import { createAuthClient } from "better-auth/react";
 import { getAuthToken } from "./portal/storage";
 
@@ -20,24 +22,34 @@ const BACKEND_AUTH_URL = (() => {
   return "https://ngv-backend.vercel.app/api/auth";
 })();
 
-export const authClient = createAuthClient({
-  baseURL: BACKEND_AUTH_URL,
-  fetchOptions: {
-    auth: {
-      type: "Bearer",
-      token: () => getAuthToken(),
-    },
-    throw: true,
-    credentials: "include",
-  },
-});
+const clientInstance =
+  typeof window !== "undefined"
+    ? createAuthClient({
+        baseURL: BACKEND_AUTH_URL,
+        fetchOptions: {
+          credentials: "include",
+        },
+      })
+    : ({
+        signIn: { email: () => Promise.resolve(null), social: () => Promise.resolve(null) },
+        signUp: { email: () => Promise.resolve(null) },
+        signOut: () => Promise.resolve(),
+        useSession: () => ({ data: null, isPending: false, error: null }),
+        forgetPassword: () => Promise.resolve({ error: null }),
+        resetPassword: () => Promise.resolve({ error: null }),
+        verifyEmail: () => Promise.resolve({ error: null }),
+      } as any);
 
-export const {
-  signIn,
-  signUp,
-  signOut,
-  useSession,
-  forgetPassword,
-  resetPassword,
-  verifyEmail,
-} = authClient;
+export const authClient = clientInstance;
+
+export const signIn = clientInstance.signIn;
+export const signUp = clientInstance.signUp;
+export const signOut = clientInstance.signOut;
+export const useSession = clientInstance.useSession;
+
+export const forgetPassword = (...args: any[]) =>
+  clientInstance.forgetPassword ? clientInstance.forgetPassword(...args) : Promise.resolve({ error: null });
+export const resetPassword = (...args: any[]) =>
+  clientInstance.resetPassword ? clientInstance.resetPassword(...args) : Promise.resolve({ error: null });
+export const verifyEmail = (...args: any[]) =>
+  clientInstance.verifyEmail ? clientInstance.verifyEmail(...args) : Promise.resolve({ error: null });

@@ -40,7 +40,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.a
 
 export async function fetchCategories(): Promise<CategoryItem[]> {
   try {
-    const res = await fetch(`${API_URL}/categories`, { cache: "no-store" });
+    const res = await fetch(`${API_URL}/categories`, { method: "GET", cache: "no-store" });
     if (!res.ok) throw new Error("Failed to fetch categories");
     const data = await res.json();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,7 +70,7 @@ export async function fetchCategoryVideos(
 
   if (category !== "all") {
     const url = `${API_URL}/categories/${encodeURIComponent(category)}/videos`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { method: "GET", cache: "no-store" });
     if (!res.ok) throw new Error("Failed");
     videos = await res.json();
   } else {
@@ -79,7 +79,7 @@ export async function fetchCategoryVideos(
     if (language !== "all") params.append("language", language);
     if (sort) params.append("sort", sort);
 
-    const res = await fetch(`${API_URL}/media?${params.toString()}`, { cache: "no-store" });
+    const res = await fetch(`${API_URL}/media?${params.toString()}`, { method: "GET", cache: "no-store" });
     const data = await res.json();
     videos = data.items || [];
   }
@@ -99,7 +99,7 @@ export async function fetchCategoryVideos(
 
 export async function fetchCategoryHighlights() {
   const categories = await fetchCategories();
-  const res = await fetch(`${API_URL}/media?sort=popular&pageSize=6`, { cache: "no-store" });
+  const res = await fetch(`${API_URL}/media?sort=popular&pageSize=6`, { method: "GET", cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch highlights");
   const data = await res.json();
   return {

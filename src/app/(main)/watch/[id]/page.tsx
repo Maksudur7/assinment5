@@ -15,6 +15,7 @@ type WatchRoutePageProps = {
 async function getMedia(id: string) {
   try {
     const res = await fetch(`${API_URL}/media/${id}`, {
+      method: "GET",
       next: { revalidate: 3600 }, // cache for 1 hour
     });
     if (!res.ok) return null;

@@ -124,7 +124,7 @@ export const authFetchers = {
         ? `${window.location.origin}/reset-password`
         : "/reset-password";
 
-    const res: any = await authClient.forgetPassword({
+    const res: any = await (authClient as any).forgetPassword({
       email,
       redirectTo,
     });

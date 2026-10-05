@@ -70,6 +70,56 @@ function AdminPageInner() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState("");
 
+  // TMDB Importer state
+  const [tmdbSearchQuery, setTmdbSearchQuery] = useState("");
+  const [tmdbType, setTmdbType] = useState<"movie" | "tv" | "multi">("multi");
+  const [tmdbResults, setTmdbResults] = useState<any[]>([]);
+  const [tmdbSearching, setTmdbSearching] = useState(false);
+  const [tmdbImportingId, setTmdbImportingId] = useState<number | null>(null);
+
+  async function handleSearchTMDB() {
+    if (!tmdbSearchQuery.trim()) return;
+    setTmdbSearching(true);
+    try {
+      const results = await (portalService as any).searchTMDB(tmdbSearchQuery.trim(), tmdbType);
+      setTmdbResults(results || []);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to search TMDB");
+    } finally {
+      setTmdbSearching(false);
+    }
+  }
+
+  async function handleImportTMDB(tmdbId: number, type: "movie" | "tv") {
+    setTmdbImportingId(tmdbId);
+    setActionLoading("Importing title & streaming player from TMDB...");
+    try {
+      const res = await (portalService as any).importTMDB(tmdbId, type);
+      setMessage(res.message || "Imported successfully!");
+      await loadMedia(mediaPage, mediaSearch);
+      await load();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to import from TMDB");
+    } finally {
+      setTmdbImportingId(null);
+      setActionLoading(null);
+    }
+  }
+
+  async function handleAutoSyncTMDB() {
+    setActionLoading("Auto-syncing top trending movies & TV series from TMDB...");
+    try {
+      const res = await (portalService as any).autoSyncTMDB(12);
+      setMessage(res.message || "Auto-sync completed!");
+      await loadMedia(mediaPage, mediaSearch);
+      await load();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to auto-sync from TMDB");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   const filteredUsers = allUsers.filter((u) => {
     if (!userSearch.trim()) return true;
     const query = userSearch.toLowerCase();
@@ -386,7 +436,7 @@ function AdminPageInner() {
       const updatedUsers = await (portalService as any).getAdminUsers();
       setAllUsers(updatedUsers || []);
       const updatedOverview = await portalService.getAdminOverview().catch(() => null);
-      setOverview(updatedOverview);
+      setOverview((updatedOverview as any)?.data || (updatedOverview as any));
     } catch (err) {
       console.error("Failed to update user role:", err);
     } finally {
@@ -475,12 +525,84 @@ function AdminPageInner() {
             <TabsTrigger value="landing" className="data-[state=active]:bg-[#E50914] py-2"><Upload className="w-4 h-4 mr-2" />Landing Page</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="media" className="grid lg:grid-cols-2 gap-6">
+          <TabsContent value="media" className="space-y-6">
+            {/* 1-Click TMDB Importer Box */}
             <Card className="bg-zinc-900 border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white">{editingId ? "Edit Media" : "Add New Media"}</CardTitle>
-                <CardDescription>Title, metadata, platform and streaming source</CardDescription>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <CardTitle className="text-white text-lg flex items-center gap-2">
+                      <Clapperboard className="w-5 h-5 text-[#E50914]" />
+                      1-Click TMDB Movie & TV Series Importer
+                    </CardTitle>
+                    <CardDescription>
+                      Search any movie or TV show title to automatically import metadata, posters, and multi-server HD streaming player.
+                    </CardDescription>
+                  </div>
+                  <Badge className="bg-[#E50914] text-white">Auto-Streaming Ready</Badge>
+                </div>
               </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                  <Input
+                    placeholder="Search movie or TV series title (e.g. Avatar, Avengers, Breaking Bad)..."
+                    className="bg-zinc-800 border-white/10 text-white flex-1 min-w-[200px]"
+                    value={tmdbSearchQuery}
+                    onChange={(e) => setTmdbSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && void handleSearchTMDB()}
+                  />
+                  <Button className="bg-[#E50914] hover:bg-[#B2070F] text-white" onClick={handleSearchTMDB} disabled={tmdbSearching}>
+                    {tmdbSearching ? "Searching..." : "Search TMDB"}
+                  </Button>
+                  <Button variant="outline" className="bg-zinc-800 border-white/20 text-white hover:bg-zinc-700" onClick={handleAutoSyncTMDB} disabled={!!actionLoading}>
+                    ⚡ Auto-Sync Top 12 Trending
+                  </Button>
+                </div>
+
+                {tmdbResults.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pt-2">
+                    {tmdbResults.map((item) => (
+                      <div key={item.tmdbId} className="bg-zinc-950 border border-white/10 rounded-lg overflow-hidden flex flex-col justify-between group hover:border-[#E50914]/50 transition-colors">
+                        <div className="relative aspect-[2/3] bg-zinc-900 overflow-hidden">
+                          <img src={item.poster} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <div className="absolute top-2 left-2">
+                            <Badge className="bg-black/80 text-white text-[10px] uppercase border border-white/20">
+                              {item.type}
+                            </Badge>
+                          </div>
+                          <div className="absolute top-2 right-2">
+                            <Badge className="bg-yellow-500 text-black font-bold text-[10px]">
+                              ★ {item.rating}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-white font-medium text-sm line-clamp-1">{item.title}</h4>
+                            <p className="text-white/50 text-xs">{item.releaseYear}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="w-full bg-[#E50914] hover:bg-[#B2070F] text-white text-xs"
+                            disabled={tmdbImportingId === item.tmdbId}
+                            onClick={() => void handleImportTMDB(item.tmdbId, item.type)}
+                          >
+                            {tmdbImportingId === item.tmdbId ? "Importing..." : "+ 1-Click Import"}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card className="bg-zinc-900 border-white/10">
+                <CardHeader>
+                  <CardTitle className="text-white">{editingId ? "Edit Media" : "Add New Media"}</CardTitle>
+                  <CardDescription>Title, metadata, platform and streaming source</CardDescription>
+                </CardHeader>
               <CardContent className="space-y-3">
                 <div><Label className="text-white">Title</Label><Input className="bg-zinc-800 border-white/10 text-white" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} /></div>
                 <div><Label className="text-white">Synopsis</Label><Textarea className="bg-zinc-800 border-white/10 text-white" value={form.synopsis} onChange={(e) => setForm((p) => ({ ...p, synopsis: e.target.value }))} /></div>
@@ -605,7 +727,8 @@ function AdminPageInner() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        </TabsContent>
 
           <TabsContent value="moderation" className="grid lg:grid-cols-2 gap-6">
             <Card className="bg-zinc-900 border-white/10">
@@ -637,7 +760,7 @@ function AdminPageInner() {
                           <span className="text-xs text-white/40">•</span>
                           <span className="text-xs text-red-400 font-bold">★ {r.rating}/10</span>
                         </div>
-                        <span className="text-xs text-white/40">{r.mediaTitle || "Media Item"}</span>
+                        <span className="text-xs text-white/40">{(r as any).mediaTitle || (r as any).media?.title || "Media Item"}</span>
                       </div>
                       <p className="text-white/80 text-sm italic bg-zinc-800/50 p-2.5 rounded border border-white/5">"{r.content}"</p>
                       <div className="flex items-center gap-2 pt-1">
@@ -682,7 +805,7 @@ function AdminPageInner() {
                     <div key={c.id} className="border border-white/10 rounded-lg p-4 bg-black/40 space-y-3 hover:border-white/20 transition-all">
                       <div className="flex items-center justify-between">
                         <span className="text-white font-semibold text-sm">{c.userName}</span>
-                        <span className="text-xs text-white/40">{c.reviewTitle ? `on "${c.reviewTitle}"` : "Comment"}</span>
+                        <span className="text-xs text-white/40">{(c as any).reviewTitle ? `on "${(c as any).reviewTitle}"` : "Comment"}</span>
                       </div>
                       <p className="text-white/80 text-sm bg-zinc-800/50 p-2.5 rounded border border-white/5">"{c.content}"</p>
                       <div className="flex items-center gap-2 pt-1">

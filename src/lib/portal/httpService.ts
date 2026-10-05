@@ -4,6 +4,7 @@ function toUserRole(role: unknown): UserRole {
 }
 import type {
   MediaInput,
+  MediaItem,
   MediaQuery,
   PortalUser,
   SocialProvider,
@@ -60,8 +61,10 @@ async function call<T>(
 
   // Ensure no double slash in URL
   const url = path.startsWith("/") ? `${API_URL}${path}` : `${API_URL}/${path}`;
+  const requestMethod = typeof init?.method === "string" ? init.method.toUpperCase() : "GET";
   const res = await fetch(url, {
     ...init,
+    method: requestMethod,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
@@ -312,7 +315,7 @@ export const httpPortalService = {
   },
   requestPasswordReset: async (email: string) => {
     const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/reset-password` : "/reset-password";
-    const res: any = await authClient.forgetPassword({ email, redirectTo });
+    const res: any = await (authClient as any).forgetPassword({ email, redirectTo });
     if (res?.error) throw new Error(res.error.message || "Failed to request password reset");
     return { ok: true };
   },
@@ -449,5 +452,17 @@ export const httpPortalService = {
     call<any>(`/admin/users/${userId}/role`, {
       method: "PATCH",
       body: JSON.stringify({ role }),
+    }),
+  searchTMDB: (query: string, type: "movie" | "tv" | "multi" = "multi") =>
+    call<any[]>(`/media/tmdb/search?query=${encodeURIComponent(query)}&type=${type}`),
+  importTMDB: (tmdbId: number | string, type: "movie" | "tv" = "movie") =>
+    call<any>("/media/tmdb/import", {
+      method: "POST",
+      body: JSON.stringify({ tmdbId, type }),
+    }),
+  autoSyncTMDB: (limit = 12) =>
+    call<any>("/media/tmdb/auto-sync", {
+      method: "POST",
+      body: JSON.stringify({ limit }),
     }),
 };

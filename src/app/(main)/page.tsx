@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 
 async function fetchFromAPI(path: string) {
   const res = await fetch(`${API_URL}${path}`, {
+    method: "GET",
     next: { revalidate: 60 },
   });
   if (!res.ok) {

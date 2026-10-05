@@ -65,6 +65,7 @@ export function NotificationCenter({ className }: { className?: string }) {
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/notifications?limit=20`, {
+        method: "GET",
         credentials: "include",
         headers: { Authorization: `Bearer ${token}` },
       });

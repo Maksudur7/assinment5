@@ -9,6 +9,7 @@ async function fetchAllMedia(): Promise<{ id: string; updatedAt?: string }[]> {
   try {
     // Fetch all media items — increase pageSize to get all
     const res = await fetch(`${API_URL}/media?pageSize=500&page=1`, {
+      method: "GET",
       next: { revalidate: 3600 }, // refresh sitemap every hour
     });
     if (!res.ok) return [];
@@ -22,6 +23,7 @@ async function fetchAllMedia(): Promise<{ id: string; updatedAt?: string }[]> {
 async function fetchAllCategories(): Promise<{ name: string }[]> {
   try {
     const res = await fetch(`${API_URL}/categories`, {
+      method: "GET",
       next: { revalidate: 3600 },
     });
     if (!res.ok) return [];
