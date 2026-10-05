@@ -3,6 +3,9 @@ import { AlertCircle } from "lucide-react";
 import { HomeClient } from "./HomeClient";
 import { JsonLd } from "@/src/components/JsonLd";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://ngv-streaming.vercel.app";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ngv-backend.vercel.app/api";
 
@@ -13,7 +16,7 @@ export const metadata: Metadata = {
 async function fetchFromAPI(path: string) {
   const res = await fetch(`${API_URL}${path}`, {
     method: "GET",
-    next: { revalidate: 60 },
+    cache: "no-store",
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch ${path}`);

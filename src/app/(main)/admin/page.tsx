@@ -134,7 +134,9 @@ function AdminPageInner() {
   async function loadMedia(page = 1, search = "") {
     const result = await portalService.getMedia({ page, pageSize: MEDIA_PAGE_SIZE, search }) as any;
     setMedia(result.items || []);
-    setMediaTotalPages(result.totalPages || 1);
+    const totalCount = typeof result.total === "number" ? result.total : (result.items?.length || 0);
+    const calculatedPages = Math.max(1, Math.ceil(totalCount / MEDIA_PAGE_SIZE));
+    setMediaTotalPages(calculatedPages);
   }
 
   async function load() {
