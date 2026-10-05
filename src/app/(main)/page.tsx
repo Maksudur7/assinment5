@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   alternates: { canonical: SITE_URL },
 };
 
-
 async function fetchFromAPI(path: string) {
   const res = await fetch(`${API_URL}${path}`, {
     method: "GET",
@@ -26,9 +25,9 @@ export default async function Page() {
   try {
     const [categories, featuredData, trendingData, newReleasesData, landingContent] = await Promise.all([
       fetchFromAPI("/categories").catch(() => []),
-      fetchFromAPI("/media?sort=highest-rated&pageSize=6").then((r) => r.items || []),
-      fetchFromAPI("/media?sort=most-reviewed&pageSize=12").then((r) => r.items || []),
-      fetchFromAPI("/media?sort=latest&pageSize=12").then((r) => r.items || []),
+      fetchFromAPI("/media?sort=rating&pageSize=6").then((r) => r.items || []).catch(() => []),
+      fetchFromAPI("/media?sort=popular&pageSize=12").then((r) => r.items || []).catch(() => []),
+      fetchFromAPI("/media?sort=latest&pageSize=12").then((r) => r.items || []).catch(() => []),
       fetchFromAPI("/landing").then((r) => r.data || null).catch(() => null),
     ]);
 
@@ -75,7 +74,6 @@ export default async function Page() {
         />
       </>
     );
-
   } catch (error) {
     return (
       <div className="min-h-screen bg-background pt-20 flex items-center justify-center px-6">
@@ -90,5 +88,3 @@ export default async function Page() {
     );
   }
 }
-
-
