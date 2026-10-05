@@ -340,6 +340,7 @@ export function WatchClient({ id }: { id: string }) {
                     url.includes("autoembed") || 
                     url.includes("2embed") || 
                     url.includes("embed") || 
+                    url.includes("smashystream") ||
                     url.includes("iframe");
 
     if (!isEmbed) return null;
@@ -350,10 +351,11 @@ export function WatchClient({ id }: { id: string }) {
       const tmdbId = match[2];
       const isTv = type === "tv";
       return [
-        { name: "Server 1 (VidSrc)", url: `https://vidsrc.to/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
-        { name: "Server 2 (AutoEmbed)", url: `https://player.autoembed.cc/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
-        { name: "Server 3 (2Embed)", url: isTv ? `https://www.2embed.cc/embedtv/${tmdbId}&s=1&e=1` : `https://www.2embed.cc/embed/${tmdbId}` },
-        { name: "Server 4 (Embed.su)", url: `https://embed.su/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
+        { name: "Server 1 (AutoEmbed)", url: `https://player.autoembed.cc/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
+        { name: "Server 2 (VidSrc Pro)", url: `https://vidsrc.pro/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
+        { name: "Server 3 (VidSrc Me)", url: `https://vidsrc.me/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
+        { name: "Server 4 (SmashyStream)", url: `https://embed.smashystream.com/playere.php?tmdb=${tmdbId}` },
+        { name: "Server 5 (2Embed)", url: isTv ? `https://www.2embed.cc/embedtv/${tmdbId}&s=1&e=1` : `https://www.2embed.cc/embed/${tmdbId}` },
       ];
     }
 
@@ -424,6 +426,7 @@ export function WatchClient({ id }: { id: string }) {
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                     allowFullScreen
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                     className="w-full h-full border-0"
                   />
                 </div>
