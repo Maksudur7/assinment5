@@ -86,7 +86,7 @@ export function WatchClient({ id }: { id: string }) {
     if (!silent) setLoading(true);
     try {
       const [meRaw, itemRaw, listRaw] = await Promise.all([
-        portalService.getCurrentUser(),
+        portalService.getCurrentUser().catch(() => null),
         portalService.getMediaById(id),
         portalService.getMedia({ page: 1, pageSize: 20 }),
       ]);
