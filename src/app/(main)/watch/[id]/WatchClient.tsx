@@ -351,7 +351,7 @@ export function WatchClient({ id }: { id: string }) {
       const isTv = type === "tv";
       return [
         { name: "Server 1 (VidSrc)", url: `https://vidsrc.to/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
-        { name: "Server 2 (AutoEmbed)", url: `https://player.autoembed.cc/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
+        { name: "Server 2 (VidSrc PM)", url: `https://vidsrc.pm/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
         { name: "Server 3 (2Embed)", url: isTv ? `https://www.2embed.cc/embedtv/${tmdbId}&s=1&e=1` : `https://www.2embed.cc/embed/${tmdbId}` },
         { name: "Server 4 (Embed.su)", url: `https://embed.su/embed/${type}/${tmdbId}${isTv ? "/1/1" : ""}` },
       ];
