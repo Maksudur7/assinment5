@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { BarChart3, Clapperboard, DollarSign, EyeOff, Shield, Trash2, Upload, UserCheck, XCircle, Layers, Plus, CheckCircle2 } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
@@ -34,9 +34,11 @@ const EMPTY_FORM = {
 const MEDIA_PAGE_SIZE = 8;
 
 function AdminPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get("tab") || "media";
   const [user, setUser] = useState<PortalUser | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [pendingReviews, setPendingReviews] = useState<Review[]>([]);
@@ -212,6 +214,7 @@ function AdminPageInner() {
   useEffect(() => {
     async function fetchData() {
       await load();
+      setIsAuthChecking(false);
     }
     fetchData();
   }, []);
@@ -444,8 +447,22 @@ function AdminPageInner() {
     }
   }
 
-  if (!user) {
+  if (isAuthChecking) {
     return <div className="min-h-screen bg-black pt-24 text-center text-white/70">Loading admin console...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-black pt-24 px-6 text-center text-white">
+        <div className="max-w-md mx-auto bg-zinc-900 border border-white/10 rounded-xl p-8">
+          <h1 className="text-white text-2xl font-bold mb-3">Authentication Required</h1>
+          <p className="text-white/70 mb-6 text-sm">Please sign in with an admin account to access the Admin Console.</p>
+          <Button className="w-full bg-[#E50914] hover:bg-[#B2070F] text-white" onClick={() => router.push("/login?callbackUrl=/admin")}>
+            Sign In
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const isAdminUser = String(user?.role || getStoredUser()?.role || "").toLowerCase() === "admin";
